@@ -1,0 +1,42 @@
+{% extends "user/base.html" %}
+
+{% block title %}Dashboard - Patient Portal{% endblock %}
+
+{% block content %}
+<div class="page-header">
+    <h1>My Dashboard</h1>
+    <a href="{{ url_for('select_disease') }}" class="btn btn-primary btn-lg">+ Submit New Form</a>
+</div>
+
+<div class="submissions-section">
+    <h2>My Submissions</h2>
+    
+    {% if submissions %}
+        <div class="submissions-grid">
+            {% for submission in submissions %}
+            <div class="submission-card">
+                <div class="submission-card-header">
+                    <h3>{{ submission.form.name }}</h3>
+                    <span class="badge">{{ submission.disease.name }}</span>
+                </div>
+                <div class="submission-card-body">
+                    <p><strong>Hospital:</strong> {{ submission.hospital.name }}</p>
+                    <p><strong>Doctor:</strong> {{ submission.doctor.name }}</p>
+                    <p><strong>Submitted:</strong> {{ submission.created_at.strftime('%Y-%m-%d %H:%M') }}</p>
+                </div>
+                <div class="submission-card-footer">
+                    <a href="{{ url_for('user_view_submission', id=submission.id) }}" class="btn btn-sm btn-primary">View Details</a>
+                </div>
+            </div>
+            {% endfor %}
+        </div>
+    {% else %}
+        <div class="empty-state">
+            <div class="empty-state-icon">📋</div>
+            <h3>No submissions yet</h3>
+            <p>Click "Submit New Form" above to get started</p>
+            <a href="{{ url_for('select_disease') }}" class="btn btn-primary">Submit Your First Form</a>
+        </div>
+    {% endif %}
+</div>
+{% endblock %}

@@ -1,0 +1,176 @@
+{% extends "admin/base.html" %}
+
+{% block title %}{% if form %}Edit Form{% else %}Create Form{% endif %} - Admin{% endblock %}
+
+{% block content %}
+<div class="page-header">
+    <h1>{% if form %}Edit Form{% else %}Create New Form{% endif %}</h1>
+    <a href="{{ url_for('admin_forms') }}" class="btn btn-secondary">Back to Forms</a>
+</div>
+
+<div class="form-builder-container">
+    <form id="formBuilderForm" method="POST">
+        <div class="form-section">
+            <h2>Form Details</h2>
+            <div class="form-group">
+                <label for="name">Form Name</label>
+                <input type="text" id="name" name="name" value="{% if form %}{{ form.name }}{% endif %}" required>
+            </div>
+            <div class="form-group">
+                <label for="description">Description</label>
+                <textarea id="description" name="description" rows="2">{% if form %}{{ form.description }}{% endif %}</textarea>
+            </div>
+            <div class="form-group">
+                <label for="disease_id">Associated Disease</label>
+                <select id="disease_id" name="disease_id" required>
+                    <option value="">Select Disease</option>
+                    {% for disease in diseases %}
+                    <option value="{{ disease.id }}" {% if form and form.disease_id == disease.id %}selected{% endif %}>{{ disease.name }}</option>
+                    {% endfor %}
+                </select>
+            </div>
+        </div>
+
+        <div class="form-section">
+            <div class="section-header">
+                <h2>Form Fields</h2>
+                <button type="button" class="btn btn-sm btn-primary" onclick="addField()">+ Add Field</button>
+            </div>
+            
+            <div id="fieldsContainer">
+                <!-- Fields will be added here dynamically -->
+            </div>
+        </div>
+
+        <input type="hidden" id="fields" name="fields" value="">
+
+        <div class="form-actions">
+            <button type="submit" class="btn btn-primary btn-lg">{% if form %}Update Form{% else %}Create Form{% endif %}</button>
+            <a href="{{ url_for('admin_forms') }}" class="btn btn-secondary btn-lg">Cancel</a>
+        </div>
+    </form>
+</div>
+
+<script>
+let fieldCounter = 0;
+let fields = {% if form %}{{ form.fields|tojson }}{% else %}[]{% endif %};
+
+// Load existing fields if editing
+if (fields.length > 0) {
+    fields.forEach((field, idx) => {
+        addField({
+            name: field.field_name,
+            type: field.field_type,
+            label: field.field_label,
+            required: field.is_required,
+            options: field.options ? JSON.parse(field.options) : []
+        });
+    });
+} else if (fieldCounter === 0) {
+    // Add one empty field for new forms
+    addField();
+}
+
+function addField(data = null) {
+    const container = document.getElementById('fieldsContainer');
+    const fieldId = fieldCounter++;
+    
+    const fieldDiv = document.createElement('div');
+    fieldDiv.className = 'field-builder';
+    fieldDiv.id = 'field-' + fieldId;
+    
+    fieldDiv.innerHTML = `
+        <div class="field-builder-header">
+            <h3>Field ${fieldId + 1}</h3>
+            <button type="button" class="btn btn-sm btn-danger" onclick="removeField(${fieldId})">Remove</button>
+        </div>
+        <div class="field-builder-body">
+            <div class="form-row">
+                <div class="form-group">
+                    <label>Field Label</label>
+                    <input type="text" class="field-label" value="${data ? data.label : ''}" required>
+                </div>
+                <div class="form-group">
+                    <label>Field Type</label>
+                    <select class="field-type" onchange="toggleOptions(${fieldId})">
+                        <option value="text" ${data && data.type === 'text' ? 'selected' : ''}>Text</option>
+                        <option value="textarea" ${data && data.type === 'textarea' ? 'selected' : ''}>Textarea</option>
+                        <option value="number" ${data && data.type === 'number' ? 'selected' : ''}>Number</option>
+                        <option value="date" ${data && data.type === 'date' ? 'selected' : ''}>Date</option>
+                        <option value="select" ${data && data.type === 'select' ? 'selected' : ''}>Dropdown</option>
+                        <option value="radio" ${data && data.type === 'radio' ? 'selected' : ''}>Radio</option>
+                        <option value="checkbox" ${data && data.type === 'checkbox' ? 'selected' : ''}>Checkbox</option>
+                    </select>
+                </div>
+            </div>
+            <div class="form-row">
+                <div class="form-group">
+                    <label>Field Name (internal)</label>
+                    <input type="text" class="field-name" value="${data ? data.name : ''}" required>
+                    <small class="text-muted">Used for storing data (e.g., patient_name, age, symptoms)</small>
+                </div>
+                <div class="form-group">
+                    <label class="checkbox-label">
+                        <input type="checkbox" class="field-required" ${data && data.required ? 'checked' : ''}>
+                        Required Field
+                    </label>
+                </div>
+            </div>
+            <div class="field-options" id="options-${fieldId}" style="display: ${data && ['select', 'radio', 'checkbox'].includes(data.type) ? 'block' : 'none'}">
+                <label>Options (one per line)</label>
+                <textarea class="field-options-text" rows="3">${data && data.options ? data.options.join('\n') : ''}</textarea>
+                <small class="text-muted">For dropdown, radio, or checkbox fields</small>
+            </div>
+        </div>
+    `;
+    
+    container.appendChild(fieldDiv);
+}
+
+function removeField(fieldId) {
+    const field = document.getElementById('field-' + fieldId);
+    if (field) field.remove();
+}
+
+function toggleOptions(fieldId) {
+    const field = document.getElementById('field-' + fieldId);
+    const typeSelect = field.querySelector('.field-type');
+    const optionsDiv = field.querySelector('.field-options');
+    
+    if (['select', 'radio', 'checkbox'].includes(typeSelect.value)) {
+        optionsDiv.style.display = 'block';
+    } else {
+        optionsDiv.style.display = 'none';
+    }
+}
+
+document.getElementById('formBuilderForm').addEventListener('submit', function(e) {
+    e.preventDefault();
+    
+    const fieldsData = [];
+    document.querySelectorAll('.field-builder').forEach(fieldDiv => {
+        const label = fieldDiv.querySelector('.field-label').value;
+        const type = fieldDiv.querySelector('.field-type').value;
+        const name = fieldDiv.querySelector('.field-name').value;
+        const required = fieldDiv.querySelector('.field-required').checked;
+        const optionsText = fieldDiv.querySelector('.field-options-text').value;
+        
+        const fieldData = {
+            label: label,
+            type: type,
+            name: name,
+            required: required
+        };
+        
+        if (['select', 'radio', 'checkbox'].includes(type) && optionsText) {
+            fieldData.options = optionsText.split('\n').filter(o => o.trim());
+        }
+        
+        fieldsData.push(fieldData);
+    });
+    
+    document.getElementById('fields').value = JSON.stringify(fieldsData);
+    this.submit();
+});
+</script>
+{% endblock %}

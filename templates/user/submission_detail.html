@@ -1,0 +1,50 @@
+{% extends "user/base.html" %}
+
+{% block title %}Submission Details - Patient Portal{% endblock %}
+
+{% block content %}
+<div class="page-header">
+    <h1>Submission Details</h1>
+    <a href="{{ url_for('user_dashboard') }}" class="btn btn-secondary">← Back to Dashboard</a>
+</div>
+
+<div class="submission-detail">
+    <div class="detail-section">
+        <h2>Submission Information</h2>
+        <dl class="detail-list">
+            <dt>Submission ID:</dt>
+            <dd>#{{ submission.id }}</dd>
+            <dt>Submitted On:</dt>
+            <dd>{{ submission.created_at.strftime('%Y-%m-%d %H:%M:%S') }}</dd>
+            <dt>Form Name:</dt>
+            <dd>{{ submission.form.name }}</dd>
+        </dl>
+    </div>
+
+    <div class="detail-section">
+        <h2>Medical Details</h2>
+        <dl class="detail-list">
+            <dt>Disease:</dt>
+            <dd>{{ submission.disease.name }}</dd>
+            <dt>Hospital:</dt>
+            <dd>{{ submission.hospital.name }}</dd>
+            <dt>Doctor:</dt>
+            <dd>{{ submission.doctor.name }} ({{ submission.doctor.specialization or 'General' }})</dd>
+        </dl>
+    </div>
+
+    <div class="detail-section">
+        <h2>Your Submitted Data</h2>
+        <div class="form-data">
+            {% set data = submission.data|fromjson %}
+            {% for field in submission.form.fields %}
+                {% set field_key = 'field_' ~ field.id %}
+                <div class="form-data-item">
+                    <strong>{{ field.field_label }}:</strong>
+                    <span>{{ data.get(field_key, 'N/A') }}</span>
+                </div>
+            {% endfor %}
+        </div>
+    </div>
+</div>
+{% endblock %}

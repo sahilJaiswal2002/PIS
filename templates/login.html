@@ -1,0 +1,35 @@
+{% extends "base.html" %}
+
+{% block title %}Login - IITB SCAN{% endblock %}
+
+{% block content %}
+<div class="auth-container">
+    <div class="auth-card">
+        <div class="auth-header">
+            <h1>IITB SCAN</h1>
+            <p>Patient Data Collection System</p>
+        </div>
+        
+        <form method="POST" class="auth-form">
+            <h2>Login</h2>
+            
+            <div class="form-group">
+                <label for="username">Username</label>
+                <input type="text" id="username" name="username" required autofocus>
+            </div>
+            
+            <div class="form-group">
+                <label for="password">Password</label>
+                <input type="password" id="password" name="password" required>
+            </div>
+            
+            <button type="submit" class="btn btn-primary btn-block">Login</button>
+            
+            <div class="auth-footer">
+                <p>Don't have an account? <a href="{{ url_for('register') }}">Register here</a></p>
+                <p class="text-muted">Default admin: username='admin', password='admin123'</p>
+            </div>
+        </form>
+    </div>
+</div>
+{% endblock %}

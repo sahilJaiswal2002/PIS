@@ -1,0 +1,46 @@
+{% extends "admin/base.html" %}
+
+{% block title %}Manage Forms - Admin{% endblock %}
+
+{% block content %}
+<div class="page-header">
+    <h1>Manage Forms</h1>
+    <a href="{{ url_for('create_form') }}" class="btn btn-primary">Create New Form</a>
+</div>
+
+<div class="table-container">
+    <table class="data-table">
+        <thead>
+            <tr>
+                <th>ID</th>
+                <th>Form Name</th>
+                <th>Disease</th>
+                <th>Fields Count</th>
+                <th>Created At</th>
+                <th>Actions</th>
+            </tr>
+        </thead>
+        <tbody>
+            {% for form in forms %}
+            <tr>
+                <td>{{ form.id }}</td>
+                <td>{{ form.name }}</td>
+                <td>{{ form.disease.name }}</td>
+                <td>{{ form.fields|length }} fields</td>
+                <td>{{ form.created_at.strftime('%Y-%m-%d %H:%M') }}</td>
+                <td>
+                    <a href="{{ url_for('edit_form', id=form.id) }}" class="btn btn-sm btn-secondary">Edit</a>
+                    <form method="POST" action="{{ url_for('delete_form', id=form.id) }}" style="display:inline;" onsubmit="return confirm('Are you sure?');">
+                        <button type="submit" class="btn btn-sm btn-danger">Delete</button>
+                    </form>
+                </td>
+            </tr>
+            {% else %}
+            <tr>
+                <td colspan="6" class="text-center text-muted">No forms found. Click "Create New Form" to build one.</td>
+            </tr>
+            {% endfor %}
+        </tbody>
+    </table>
+</div>
+{% endblock %}
