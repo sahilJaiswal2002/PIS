@@ -443,7 +443,6 @@ def user_view_submission(id):
 @app.route('/user/submissions/<int:id>/download-pdf')
 @login_required
 def download_submission_pdf(id):
-    from flask import send_file
     from export_utils import generate_submission_pdf
 
     submission = Submission.query.filter_by(id=id, user_id=current_user.id).first_or_404()
@@ -460,7 +459,6 @@ def download_submission_pdf(id):
 @app.route('/user/submissions/<int:id>/download-csv')
 @login_required
 def download_submission_csv(id):
-    from flask import send_file
     from export_utils import generate_submissions_csv
 
     submission = Submission.query.filter_by(id=id, user_id=current_user.id).first_or_404()
@@ -478,7 +476,6 @@ def download_submission_csv(id):
 @login_required
 @admin_required
 def admin_download_submission_pdf(id):
-    from flask import send_file
     from export_utils import generate_submission_pdf
 
     submission = Submission.query.get_or_404(id)
