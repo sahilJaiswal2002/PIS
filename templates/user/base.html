@@ -16,6 +16,7 @@
             </div>
         </div>
         <div class="topbar-user-menu">
+            <button data-toggle-dark-mode class="btn btn-text" title="Toggle Dark Mode" style="font-size: 18px;">🌙</button>
             <span class="body-medium">Welcome, <strong>{{ current_user.username }}</strong></span>
             <a href="{{ url_for('logout') }}" class="topbar-logout-btn">Logout</a>
         </div>
