@@ -738,7 +738,7 @@ a:hover {
 }
 
 .btn-block {
-    display: flex;
+    display: block;
     width: 100%;
 }
 
