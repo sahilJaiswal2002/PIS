@@ -1,10 +1,11 @@
-from flask import render_template, request, redirect, url_for, flash, jsonify
+from flask import render_template, request, redirect, url_for, flash, jsonify, send_file
 from flask_login import login_user, logout_user, login_required, current_user
 from werkzeug.security import generate_password_hash, check_password_hash
 from functools import wraps
 import json
+import io
 from app import app, db, login_manager
-from models import User, Disease, Hospital, Doctor, Form, FormField, Submission
+from models import User, Disease, Hospital, Doctor, Form, FormField, Submission, DraftSubmission
 
 @login_manager.user_loader
 def load_user(user_id):
@@ -362,6 +363,42 @@ def user_dashboard():
     submissions = Submission.query.filter_by(user_id=current_user.id).order_by(Submission.created_at.desc()).all()
     return render_template('user/dashboard.html', submissions=submissions)
 
+@app.route('/user/forms/search')
+@login_required
+def form_search():
+    """Search and filter available forms"""
+    search_query = request.args.get('search', '')
+    disease_filter = request.args.get('disease', '')
+    hospital_filter = request.args.get('hospital', '')
+
+    query = Form.query.filter_by(is_active=True)
+
+    if search_query:
+        query = query.filter(
+            (Form.name.ilike(f'%{search_query}%')) |
+            (Form.disease.has(Disease.name.ilike(f'%{search_query}%')))
+        )
+
+    if disease_filter:
+        query = query.filter(Form.disease.has(Disease.name == disease_filter))
+
+    forms = query.all()
+
+    # Filter by hospital if specified
+    if hospital_filter:
+        forms = [f for f in forms if any(d.hospital.name == hospital_filter for d in f.disease.doctors)]
+
+    diseases = Disease.query.all()
+    hospitals = Hospital.query.all()
+
+    return render_template('user/form_search.html',
+                         forms=forms,
+                         diseases=diseases,
+                         hospitals=hospitals,
+                         search_query=search_query,
+                         disease_filter=disease_filter,
+                         hospital_filter=hospital_filter)
+
 @app.route('/user/submit/select-disease')
 @login_required
 def select_disease():
@@ -437,3 +474,52 @@ def submit_form():
 def user_view_submission(id):
     submission = Submission.query.filter_by(id=id, user_id=current_user.id).first_or_404()
     return render_template('user/submission_detail.html', submission=submission)
+
+# Export Routes
+@app.route('/user/submissions/<int:id>/download-pdf')
+@login_required
+def download_submission_pdf(id):
+    from export_utils import generate_submission_pdf
+
+    submission = Submission.query.filter_by(id=id, user_id=current_user.id).first_or_404()
+
+    pdf_buffer = generate_submission_pdf(submission)
+
+    return send_file(
+        pdf_buffer,
+        mimetype='application/pdf',
+        as_attachment=True,
+        download_name=f'submission_{submission.id}_{submission.form.name.replace(" ", "_")}.pdf'
+    )
+
+@app.route('/user/submissions/<int:id>/download-csv')
+@login_required
+def download_submission_csv(id):
+    from export_utils import generate_submissions_csv
+
+    submission = Submission.query.filter_by(id=id, user_id=current_user.id).first_or_404()
+
+    csv_buffer = generate_submissions_csv([submission], include_field_data=False)
+
+    return send_file(
+        io.BytesIO(csv_buffer.getvalue().encode()),
+        mimetype='text/csv',
+        as_attachment=True,
+        download_name=f'submission_{submission.id}.csv'
+    )
+
+@app.route('/admin/submissions/<int:id>/download-pdf')
+@login_required
+@admin_required
+def admin_download_submission_pdf(id):
+    from export_utils import generate_submission_pdf
+
+    submission = Submission.query.get_or_404(id)
+    pdf_buffer = generate_submission_pdf(submission)
+
+    return send_file(
+        pdf_buffer,
+        mimetype='application/pdf',
+        as_attachment=True,
+        download_name=f'submission_{submission.id}_{submission.form.name.replace(" ", "_")}.pdf'
+    )

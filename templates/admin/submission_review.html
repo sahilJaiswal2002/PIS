@@ -1,0 +1,99 @@
+{% extends "admin/base.html" %}
+
+{% block title %}Review Submission - Admin{% endblock %}
+
+{% block content %}
+<div class="page-header-wrapper">
+    <div>
+        <h1 class="headline-medium">Review Submission</h1>
+        <p class="text-muted">Form: {{ form.name }}</p>
+    </div>
+    <a href="{{ url_for('admin_submissions_pending') }}" class="btn btn-outline">← Back</a>
+</div>
+
+<div class="form-grid mb-8">
+    <div class="card">
+        <div class="card-header">Patient Information</div>
+        <div class="card-body">
+            <p class="mb-2"><strong>Name:</strong> {{ submission.user.username }}</p>
+            <p class="mb-2"><strong>Email:</strong> {{ submission.user.email }}</p>
+            <p class="mb-2"><strong>ID:</strong> {{ submission.user.id }}</p>
+            <p><strong>Joined:</strong> {{ submission.user.created_at.strftime('%B %d, %Y') }}</p>
+        </div>
+    </div>
+
+    <div class="card">
+        <div class="card-header">Submission Details</div>
+        <div class="card-body">
+            <p class="mb-2"><strong>Disease:</strong> {{ submission.disease.name }}</p>
+            <p class="mb-2"><strong>Hospital:</strong> {{ submission.hospital.name }}</p>
+            <p class="mb-2"><strong>Doctor:</strong> {{ submission.doctor.name }}</p>
+            <p class="mb-2"><strong>Status:</strong> <span class="badge {% if submission.status == 'approved' %}badge-success{% elif submission.status == 'rejected' %}badge-danger{% else %}badge-warning{% endif %}">{{ submission.status.title() }}</span></p>
+            <p><strong>Submitted:</strong> {{ submission.created_at.strftime('%B %d, %Y at %H:%M') }}</p>
+        </div>
+    </div>
+</div>
+
+<div class="card mb-8">
+    <div class="card-header">Form Data</div>
+    <div class="card-body">
+        {% for field in form.fields %}
+            <div class="mb-6">
+                <h3 class="label-large mb-2">{{ field.field_label }}</h3>
+                <p class="body-medium p-3" style="background: var(--md-sys-color-surface-variant); border-radius: var(--md-sys-shape-corner-small);">
+                    {% set field_key = 'field_' + field.field_name %}
+                    {% if field_key in submission_data %}
+                        {{ submission_data[field_key] }}
+                    {% else %}
+                        <span class="text-muted">Not provided</span>
+                    {% endif %}
+                </p>
+            </div>
+        {% endfor %}
+    </div>
+</div>
+
+{% if previous_reviews %}
+    <div class="card mb-8">
+        <div class="card-header">Review History</div>
+        <div class="card-body">
+            {% for review in previous_reviews %}
+                <div class="mb-6 p-4" style="background: var(--md-sys-color-surface-variant); border-left: 4px solid var(--md-sys-color-primary); border-radius: var(--md-sys-shape-corner-small);">
+                    <div class="flex justify-between align-center mb-2">
+                        <h3 class="label-large mb-0">{{ review.reviewer.username }}</h3>
+                        <span class="badge {% if review.status == 'approved' %}badge-success{% elif review.status == 'rejected' %}badge-danger{% else %}badge-warning{% endif %}">{{ review.status.title() }}</span>
+                    </div>
+                    <p class="body-small text-muted mb-2">{{ review.created_at.strftime('%B %d, %Y at %H:%M') }}</p>
+                    <p class="body-small">{{ review.comment }}</p>
+                </div>
+            {% endfor %}
+        </div>
+    </div>
+{% endif %}
+
+<div class="card">
+    <div class="card-header">Submit Review</div>
+    <form method="post" class="form-wrapper">
+        <div class="form-group">
+            <label class="form-label form-label-required">Decision</label>
+            <select name="review_status" class="form-select" required>
+                <option value="">-- Select Decision --</option>
+                <option value="approved">Approve</option>
+                <option value="rejected">Reject</option>
+                <option value="needs_revision">Needs Revision</option>
+            </select>
+        </div>
+
+        <div class="form-group">
+            <label class="form-label">Comments</label>
+            <textarea name="comment" class="form-textarea" placeholder="Add any comments about this submission..."></textarea>
+            <p class="form-helper-text">Optional: Add feedback or reasons for your decision</p>
+        </div>
+
+        <div class="form-actions">
+            <a href="{{ url_for('admin_submissions_pending') }}" class="btn btn-outline">Cancel</a>
+            <button type="submit" class="btn btn-primary">Submit Review</button>
+        </div>
+    </form>
+</div>
+{% endblock %}

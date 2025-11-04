@@ -1,0 +1,85 @@
+{% extends "admin/base.html" %}
+
+{% block title %}{{ patient.username }} - Patient Details{% endblock %}
+
+{% block content %}
+<div class="page-header-wrapper">
+    <div>
+        <h1 class="headline-medium">{{ patient.username }}</h1>
+        <p class="text-muted">Patient ID: {{ patient.id }} | Joined: {{ patient.created_at.strftime('%B %d, %Y') }}</p>
+    </div>
+    <a href="{{ url_for('admin_patients') }}" class="btn btn-outline">← Back to Patients</a>
+</div>
+
+<div class="card mb-8">
+    <div class="card-header">Patient Information</div>
+    <div class="card-body">
+        <div class="form-group-row">
+            <div>
+                <h3 class="label-large">Email Address</h3>
+                <p class="body-medium">{{ patient.email }}</p>
+            </div>
+            <div>
+                <h3 class="label-large">Account Created</h3>
+                <p class="body-medium">{{ patient.created_at.strftime('%B %d, %Y at %H:%M') }}</p>
+            </div>
+        </div>
+    </div>
+</div>
+
+<h2 class="headline-small mb-4">Submission History</h2>
+
+{% if submissions %}
+    <div class="form-grid">
+        {% for submission in submissions %}
+            <div class="card">
+                <div class="flex justify-between align-center mb-3">
+                    <h3 class="title-medium mb-0">{{ submission.form.name }}</h3>
+                    <span class="badge {% if submission.status == 'approved' %}badge-success{% elif submission.status == 'rejected' %}badge-danger{% else %}badge-warning{% endif %}">{{ submission.status.title() }}</span>
+                </div>
+                <div class="body-small mb-2">
+                    <p class="mb-1"><strong>Disease:</strong> {{ submission.disease.name }}</p>
+                    <p class="mb-1"><strong>Hospital:</strong> {{ submission.hospital.name }}</p>
+                    <p class="mb-1"><strong>Doctor:</strong> {{ submission.doctor.name }}</p>
+                    <p class="mb-1"><strong>Submitted:</strong> {{ submission.created_at.strftime('%b %d, %Y %H:%M') }}</p>
+                </div>
+                <div class="form-actions">
+                    <a href="{{ url_for('view_submission', id=submission.id) }}" class="btn btn-primary btn-sm">View Details</a>
+                    {% if submission.status == 'submitted' %}
+                        <a href="{{ url_for('review_submission', submission_id=submission.id) }}" class="btn btn-secondary btn-sm">Review</a>
+                    {% endif %}
+                </div>
+            </div>
+        {% endfor %}
+    </div>
+{% else %}
+    <div class="empty-state-wrapper">
+        <div class="empty-state-icon">📝</div>
+        <h3 class="empty-state-title">No Submissions Yet</h3>
+        <p class="empty-state-description">This patient has not submitted any forms yet.</p>
+    </div>
+{% endif %}
+
+{% if drafts %}
+    <h2 class="headline-small mb-4 mt-8">Draft Forms</h2>
+    <div class="form-grid">
+        {% for draft in drafts %}
+            <div class="card">
+                <div class="flex justify-between align-center mb-3">
+                    <h3 class="title-medium mb-0">{{ draft.form.name }}</h3>
+                    <span class="badge badge-warning">Draft</span>
+                </div>
+                <div class="body-small mb-2">
+                    <p class="mb-1"><strong>Disease:</strong> {{ draft.disease.name }}</p>
+                    <p class="mb-1"><strong>Hospital:</strong> {{ draft.hospital.name }}</p>
+                    <p class="mb-1"><strong>Doctor:</strong> {{ draft.doctor.name }}</p>
+                    <p class="mb-1"><strong>Last Updated:</strong> {{ draft.updated_at.strftime('%b %d, %Y %H:%M') }}</p>
+                </div>
+                <div class="form-actions">
+                    <a href="#" class="btn btn-primary btn-sm" disabled>View Draft</a>
+                </div>
+            </div>
+        {% endfor %}
+    </div>
+{% endif %}
+{% endblock %}

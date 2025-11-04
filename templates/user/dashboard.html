@@ -1,42 +1,146 @@
 {% extends "user/base.html" %}
 
-{% block title %}Dashboard - Patient Portal{% endblock %}
+{% block title %}My Dashboard - Patient Portal{% endblock %}
 
 {% block content %}
-<div class="page-header">
-    <h1>My Dashboard</h1>
-    <a href="{{ url_for('select_disease') }}" class="btn btn-primary btn-lg">+ Submit New Form</a>
+<div class="page-header-wrapper mb-8">
+    <div>
+        <h1 class="headline-medium">My Dashboard</h1>
+        <p class="text-muted">Track your form submissions and reviews</p>
+    </div>
+    <div class="flex gap-3">
+        <a href="{{ url_for('form_search') }}" class="btn btn-secondary btn-lg">🔍 Search Forms</a>
+        <a href="{{ url_for('select_disease') }}" class="btn btn-primary btn-lg">📝 Submit New Form</a>
+    </div>
 </div>
 
-<div class="submissions-section">
-    <h2>My Submissions</h2>
-    
-    {% if submissions %}
-        <div class="submissions-grid">
-            {% for submission in submissions %}
-            <div class="submission-card">
-                <div class="submission-card-header">
-                    <h3>{{ submission.form.name }}</h3>
-                    <span class="badge">{{ submission.disease.name }}</span>
+<div class="stats-grid mb-8">
+    <div class="stat-card">
+        <div class="stat-card-icon">📋</div>
+        <div class="stat-card-content">
+            <div class="stat-card-number">{{ submissions|length }}</div>
+            <div class="stat-card-label">Total Submissions</div>
+        </div>
+    </div>
+
+    <div class="stat-card">
+        <div class="stat-card-icon">✅</div>
+        <div class="stat-card-content">
+            <div class="stat-card-number">{{ submissions|selectattr('status', 'equalto', 'approved')|list|length }}</div>
+            <div class="stat-card-label">Approved</div>
+        </div>
+    </div>
+
+    <div class="stat-card">
+        <div class="stat-card-icon">⏳</div>
+        <div class="stat-card-content">
+            <div class="stat-card-number">{{ submissions|selectattr('status', 'equalto', 'submitted')|list|length }}</div>
+            <div class="stat-card-label">Pending Review</div>
+        </div>
+    </div>
+
+    <div class="stat-card">
+        <div class="stat-card-icon">🔄</div>
+        <div class="stat-card-content">
+            <div class="stat-card-number">{{ submissions|selectattr('status', 'equalto', 'needs_revision')|list|length }}</div>
+            <div class="stat-card-label">Needs Revision</div>
+        </div>
+    </div>
+</div>
+
+{% set pending_submissions = submissions|selectattr('status', 'equalto', 'submitted')|list %}
+{% if pending_submissions %}
+    <div class="card mb-8" style="border-left: 4px solid var(--md-sys-color-warning);">
+        <div class="card-header">⏳ Pending Review</div>
+        <div class="form-grid" style="grid-template-columns: repeat(auto-fill, minmax(250px, 1fr));">
+            {% for submission in pending_submissions %}
+                <div class="card" style="background: var(--md-sys-color-warning-container);">
+                    <div class="flex justify-between align-center mb-2">
+                        <h3 class="title-small mb-0">{{ submission.form.name }}</h3>
+                    </div>
+                    <p class="body-small mb-2">
+                        <strong>{{ submission.disease.name }}</strong> at {{ submission.hospital.name }}
+                    </p>
+                    <p class="label-small text-muted mb-3">
+                        Submitted: {{ submission.created_at.strftime('%b %d, %Y') }}
+                    </p>
+                    <div class="form-actions">
+                        <a href="{{ url_for('user_view_submission', id=submission.id) }}" class="btn btn-primary btn-sm">View</a>
+                    </div>
                 </div>
-                <div class="submission-card-body">
-                    <p><strong>Hospital:</strong> {{ submission.hospital.name }}</p>
-                    <p><strong>Doctor:</strong> {{ submission.doctor.name }}</p>
-                    <p><strong>Submitted:</strong> {{ submission.created_at.strftime('%Y-%m-%d %H:%M') }}</p>
-                </div>
-                <div class="submission-card-footer">
-                    <a href="{{ url_for('user_view_submission', id=submission.id) }}" class="btn btn-sm btn-primary">View Details</a>
-                </div>
-            </div>
             {% endfor %}
         </div>
-    {% else %}
-        <div class="empty-state">
-            <div class="empty-state-icon">📋</div>
-            <h3>No submissions yet</h3>
-            <p>Click "Submit New Form" above to get started</p>
-            <a href="{{ url_for('select_disease') }}" class="btn btn-primary">Submit Your First Form</a>
+    </div>
+{% endif %}
+
+<h2 class="headline-small mb-6">All Submissions</h2>
+
+{% if submissions %}
+    <div class="table-wrapper mb-8">
+        <table class="data-table">
+            <thead>
+                <tr>
+                    <th>Form</th>
+                    <th>Disease</th>
+                    <th>Hospital</th>
+                    <th>Status</th>
+                    <th>Submitted</th>
+                    <th>Actions</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for submission in submissions %}
+                    <tr>
+                        <td>
+                            <strong>{{ submission.form.name }}</strong>
+                        </td>
+                        <td>{{ submission.disease.name }}</td>
+                        <td>{{ submission.hospital.name }}</td>
+                        <td>
+                            <span class="badge {% if submission.status == 'approved' %}badge-success{% elif submission.status == 'submitted' %}badge-primary{% elif submission.status == 'rejected' %}badge-danger{% elif submission.status == 'needs_revision' %}badge-warning{% endif %}">
+                                {{ submission.status.title() }}
+                            </span>
+                        </td>
+                        <td>{{ submission.created_at.strftime('%b %d, %Y') }}</td>
+                        <td>
+                            <div class="flex gap-2">
+                                <a href="{{ url_for('user_view_submission', id=submission.id) }}" class="table-action-btn" title="View Details">👁️</a>
+                                <a href="{{ url_for('download_submission_pdf', id=submission.id) }}" class="table-action-btn" title="Download PDF">📄</a>
+                                <a href="{{ url_for('download_submission_csv', id=submission.id) }}" class="table-action-btn" title="Download CSV">📊</a>
+                            </div>
+                        </td>
+                    </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+{% else %}
+    <div class="empty-state-wrapper">
+        <div class="empty-state-icon">📋</div>
+        <h3 class="empty-state-title">No Submissions Yet</h3>
+        <p class="empty-state-description">You haven't submitted any forms. Click "Submit New Form" above to get started.</p>
+        <a href="{{ url_for('select_disease') }}" class="btn btn-primary empty-state-action">Submit Your First Form</a>
+    </div>
+{% endif %}
+
+<div class="card mt-8">
+    <div class="card-header">📚 Helpful Tips</div>
+    <div class="card-body">
+        <div class="flex flex-col gap-4">
+            <div>
+                <h3 class="label-large">Status Meanings</h3>
+                <ul class="flex flex-col gap-2">
+                    <li>✅ <strong>Approved</strong> - Your submission has been reviewed and accepted</li>
+                    <li>⏳ <strong>Pending Review</strong> - Your submission is waiting for review by medical staff</li>
+                    <li>❌ <strong>Rejected</strong> - Your submission was not accepted. Please review feedback.</li>
+                    <li>🔄 <strong>Needs Revision</strong> - Please make corrections and resubmit your form</li>
+                </ul>
+            </div>
+            <div>
+                <h3 class="label-large">Download Your Data</h3>
+                <p class="body-small">You can download your submissions as PDF or CSV files using the action buttons in the submissions table above.</p>
+            </div>
         </div>
-    {% endif %}
+    </div>
 </div>
 {% endblock %}

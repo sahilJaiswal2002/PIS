@@ -7,26 +7,29 @@
     <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
     {% block extra_css %}{% endblock %}
 </head>
-<body class="user-layout">
-    <nav class="topbar">
-        <div class="topbar-brand">
-            <h2>IITB SCAN</h2>
-            <span class="text-muted">Patient Portal</span>
+<body class="user-page-wrapper">
+    <nav class="user-topbar">
+        <div>
+            <div class="topbar-brand">
+                <h2>IITB SCAN</h2>
+                <p>Patient Portal</p>
+            </div>
         </div>
-        <div class="topbar-user">
-            <span>Welcome, <strong>{{ current_user.username }}</strong></span>
-            <a href="{{ url_for('logout') }}" class="btn btn-sm btn-outline">Logout</a>
+        <div class="topbar-user-menu">
+            <button data-toggle-dark-mode class="btn btn-text" title="Toggle Dark Mode" style="font-size: 18px;">🌙</button>
+            <span class="body-medium">Welcome, <strong>{{ current_user.username }}</strong></span>
+            <a href="{{ url_for('logout') }}" class="topbar-logout-btn">Logout</a>
         </div>
     </nav>
     
-    <main class="container">
+    <main class="page-container">
         {% with messages = get_flashed_messages(with_categories=true) %}
             {% if messages %}
-                <div class="flash-messages">
+                <div class="flash-messages-container">
                     {% for category, message in messages %}
-                        <div class="flash flash-{{ category }}">
-                            {{ message }}
-                            <button class="flash-close" onclick="this.parentElement.remove()">&times;</button>
+                        <div class="alert alert-{{ category }}">
+                            <span>{{ message }}</span>
+                            <button class="alert-close-btn" onclick="this.parentElement.remove()">&times;</button>
                         </div>
                     {% endfor %}
                 </div>

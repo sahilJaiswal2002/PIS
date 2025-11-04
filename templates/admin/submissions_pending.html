@@ -1,0 +1,63 @@
+{% extends "admin/base.html" %}
+
+{% block title %}Submissions Pending Review{% endblock %}
+
+{% block content %}
+<div class="page-header-wrapper">
+    <div>
+        <h1 class="headline-medium">Submissions Review</h1>
+        <p class="text-muted">Review and approve patient form submissions</p>
+    </div>
+</div>
+
+<div class="card mb-8">
+    <div class="card-header">Filter by Status</div>
+    <div class="flex gap-2 flex-wrap">
+        <a href="{{ url_for('admin_submissions_pending', status='submitted') }}" class="btn {% if status_filter == 'submitted' %}btn-primary{% else %}btn-outline{% endif %}">Pending</a>
+        <a href="{{ url_for('admin_submissions_pending', status='approved') }}" class="btn {% if status_filter == 'approved' %}btn-primary{% else %}btn-outline{% endif %}">Approved</a>
+        <a href="{{ url_for('admin_submissions_pending', status='rejected') }}" class="btn {% if status_filter == 'rejected' %}btn-primary{% else %}btn-outline{% endif %}">Rejected</a>
+        <a href="{{ url_for('admin_submissions_pending', status='needs_revision') }}" class="btn {% if status_filter == 'needs_revision' %}btn-primary{% else %}btn-outline{% endif %}">Needs Revision</a>
+    </div>
+</div>
+
+{% if submissions %}
+    <div class="form-grid">
+        {% for submission in submissions %}
+            <div class="card">
+                <div class="flex justify-between align-center mb-3">
+                    <h3 class="title-medium mb-0">{{ submission.form.name }}</h3>
+                    <span class="badge {% if submission.status == 'approved' %}badge-success{% elif submission.status == 'rejected' %}badge-danger{% elif submission.status == 'needs_revision' %}badge-warning{% else %}badge-primary{% endif %}">{{ submission.status.title() }}</span>
+                </div>
+                
+                <div class="body-small mb-3">
+                    <p class="mb-1"><strong>Patient:</strong> {{ submission.user.username }} ({{ submission.user.email }})</p>
+                    <p class="mb-1"><strong>Disease:</strong> {{ submission.disease.name }}</p>
+                    <p class="mb-1"><strong>Hospital:</strong> {{ submission.hospital.name }}</p>
+                    <p class="mb-1"><strong>Doctor:</strong> {{ submission.doctor.name }}</p>
+                    <p class="mb-1"><strong>Submitted:</strong> {{ submission.created_at.strftime('%b %d, %Y %H:%M') }}</p>
+                </div>
+
+                {% if submission.reviews|length > 0 %}
+                    <div class="mb-3 p-3" style="background: var(--md-sys-color-surface-variant); border-radius: var(--md-sys-shape-corner-small);">
+                        <p class="label-small mb-2"><strong>Latest Review:</strong></p>
+                        {% set latest_review = submission.reviews|first %}
+                        <p class="body-small mb-1">By {{ latest_review.reviewer.username }} ({{ latest_review.status.title() }})</p>
+                        <p class="body-small text-muted">{{ latest_review.comment }}</p>
+                    </div>
+                {% endif %}
+
+                <div class="form-actions">
+                    <a href="{{ url_for('view_submission', id=submission.id) }}" class="btn btn-secondary btn-sm">View Data</a>
+                    <a href="{{ url_for('review_submission', submission_id=submission.id) }}" class="btn btn-primary btn-sm">Review</a>
+                </div>
+            </div>
+        {% endfor %}
+    </div>
+{% else %}
+    <div class="empty-state-wrapper">
+        <div class="empty-state-icon">✅</div>
+        <h3 class="empty-state-title">No Submissions</h3>
+        <p class="empty-state-description">There are no submissions with the status "{{ status_filter.title() }}".</p>
+    </div>
+{% endif %}
+{% endblock %}

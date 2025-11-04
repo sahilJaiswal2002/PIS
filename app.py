@@ -15,6 +15,7 @@ login_manager.login_view = 'login'
 
 # Import routes after app initialization
 from routes import *
+from admin_routes import *
 
 if __name__ == '__main__':
     with app.app_context():
