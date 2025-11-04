@@ -363,6 +363,42 @@ def user_dashboard():
     submissions = Submission.query.filter_by(user_id=current_user.id).order_by(Submission.created_at.desc()).all()
     return render_template('user/dashboard.html', submissions=submissions)
 
+@app.route('/user/forms/search')
+@login_required
+def form_search():
+    """Search and filter available forms"""
+    search_query = request.args.get('search', '')
+    disease_filter = request.args.get('disease', '')
+    hospital_filter = request.args.get('hospital', '')
+
+    query = Form.query.filter_by(is_active=True)
+
+    if search_query:
+        query = query.filter(
+            (Form.name.ilike(f'%{search_query}%')) |
+            (Form.disease.has(Disease.name.ilike(f'%{search_query}%')))
+        )
+
+    if disease_filter:
+        query = query.filter(Form.disease.has(Disease.name == disease_filter))
+
+    forms = query.all()
+
+    # Filter by hospital if specified
+    if hospital_filter:
+        forms = [f for f in forms if any(d.hospital.name == hospital_filter for d in f.disease.doctors)]
+
+    diseases = Disease.query.all()
+    hospitals = Hospital.query.all()
+
+    return render_template('user/form_search.html',
+                         forms=forms,
+                         diseases=diseases,
+                         hospitals=hospitals,
+                         search_query=search_query,
+                         disease_filter=disease_filter,
+                         hospital_filter=hospital_filter)
+
 @app.route('/user/submit/select-disease')
 @login_required
 def select_disease():
