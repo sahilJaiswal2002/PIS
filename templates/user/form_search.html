@@ -1,0 +1,123 @@
+{% extends "user/base.html" %}
+
+{% block title %}Find Forms - Patient Portal{% endblock %}
+
+{% block content %}
+<div class="page-header-wrapper mb-8">
+    <div>
+        <h1 class="headline-medium">Find and Submit Forms</h1>
+        <p class="text-muted">Search for forms by disease, hospital, or date</p>
+    </div>
+    <a href="{{ url_for('user_dashboard') }}" class="btn btn-outline">← Back to Dashboard</a>
+</div>
+
+<div class="card mb-8">
+    <div class="card-header">Search Filters</div>
+    <form method="get" class="form-wrapper">
+        <div class="form-group-row">
+            <div class="form-group">
+                <label class="form-label">Search Forms</label>
+                <input type="text" name="search" class="form-input" placeholder="Enter form or disease name" value="{{ search_query }}" data-search-filter>
+            </div>
+            <div class="form-group">
+                <label class="form-label">By Disease</label>
+                <select name="disease" class="form-select" data-filter="disease">
+                    <option value="">-- All Diseases --</option>
+                    {% for disease in diseases %}
+                        <option value="{{ disease.name }}" {% if disease.name == disease_filter %}selected{% endif %}>{{ disease.name }}</option>
+                    {% endfor %}
+                </select>
+            </div>
+            <div class="form-group">
+                <label class="form-label">By Hospital</label>
+                <select name="hospital" class="form-select" data-filter="hospital">
+                    <option value="">-- All Hospitals --</option>
+                    {% for hospital in hospitals %}
+                        <option value="{{ hospital.name }}" {% if hospital.name == hospital_filter %}selected{% endif %}>{{ hospital.name }}</option>
+                    {% endfor %}
+                </select>
+            </div>
+        </div>
+        <div class="form-actions">
+            <button type="submit" class="btn btn-primary">Search</button>
+            <a href="{{ url_for('form_search') }}" class="btn btn-outline">Clear Filters</a>
+        </div>
+    </form>
+</div>
+
+{% if forms %}
+    <h2 class="headline-small mb-6">Available Forms ({{ forms|length }})</h2>
+    <div class="form-grid">
+        {% for form in forms %}
+            {% set related_disease = form.disease %}
+            <div class="selection-card" data-filterable data-disease="{{ related_disease.name }}" data-hospital="{{ related_disease.doctors[0].hospital.name if related_disease.doctors else '' }}">
+                <div class="selection-card-icon">📋</div>
+                <h3 class="selection-card-title">{{ form.name }}</h3>
+                <div class="selection-card-description">
+                    <p class="mb-2">
+                        <strong>Disease:</strong><br>{{ related_disease.name }}
+                    </p>
+                    {% if form.description %}
+                        <p class="mb-2">
+                            <strong>Description:</strong><br>{{ form.description[:80] }}{% if form.description|length > 80 %}...{% endif %}
+                        </p>
+                    {% endif %}
+                    {% if related_disease.doctors|length > 0 %}
+                        <p class="mb-2">
+                            <strong>Hospitals:</strong><br>
+                            {% set hospital_names = related_disease.doctors|map(attribute='hospital')|map(attribute='name')|unique %}
+                            {{ hospital_names|list|join(', ')[:80] }}{% if hospital_names|list|join(', ')|length > 80 %}...{% endif %}
+                        </p>
+                    {% endif %}
+                    <p class="label-small text-muted">
+                        {{ form.fields|length }} field{% if form.fields|length != 1 %}s{% endif %}
+                    </p>
+                </div>
+                <a href="{{ url_for('select_disease') }}" class="btn btn-primary" style="width: 100%;">Submit This Form</a>
+            </div>
+        {% endfor %}
+    </div>
+{% else %}
+    <div class="empty-state-wrapper">
+        <div class="empty-state-icon">🔍</div>
+        <h3 class="empty-state-title">No Forms Found</h3>
+        <p class="empty-state-description">No forms match your search criteria. Try adjusting your filters or <a href="{{ url_for('user_dashboard') }}" style="color: var(--md-sys-color-primary); text-decoration: underline;">return to dashboard</a>.</p>
+    </div>
+{% endif %}
+
+<div class="card mt-8">
+    <div class="card-header">ℹ️ How to Submit Forms</div>
+    <div class="card-body">
+        <div class="flex flex-col gap-4">
+            <div class="flex gap-3">
+                <span class="label-large" style="color: var(--md-sys-color-primary); min-width: 30px;">1</span>
+                <div>
+                    <h3 class="label-large">Select a Form</h3>
+                    <p class="body-small text-muted">Click "Submit This Form" on any available form to begin the submission process.</p>
+                </div>
+            </div>
+            <div class="flex gap-3">
+                <span class="label-large" style="color: var(--md-sys-color-primary); min-width: 30px;">2</span>
+                <div>
+                    <h3 class="label-large">Choose Hospital & Doctor</h3>
+                    <p class="body-small text-muted">Select the hospital and doctor associated with your form submission.</p>
+                </div>
+            </div>
+            <div class="flex gap-3">
+                <span class="label-large" style="color: var(--md-sys-color-primary); min-width: 30px;">3</span>
+                <div>
+                    <h3 class="label-large">Fill Form Details</h3>
+                    <p class="body-small text-muted">Complete all required fields. Your progress is automatically saved as you fill the form.</p>
+                </div>
+            </div>
+            <div class="flex gap-3">
+                <span class="label-large" style="color: var(--md-sys-color-primary); min-width: 30px;">4</span>
+                <div>
+                    <h3 class="label-large">Submit & Track</h3>
+                    <p class="body-small text-muted">Submit your form and track its status from your dashboard. You'll be notified when it's reviewed.</p>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
