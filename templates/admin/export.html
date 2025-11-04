@@ -1,0 +1,88 @@
+{% extends "admin/base.html" %}
+
+{% block title %}Export Submissions - Admin{% endblock %}
+
+{% block content %}
+<div class="page-header-wrapper">
+    <div>
+        <h1 class="headline-medium">Export Submissions</h1>
+        <p class="text-muted">Download submission data in various formats</p>
+    </div>
+</div>
+
+<div class="card">
+    <div class="card-header">Export Settings</div>
+    <form method="post" class="form-wrapper">
+        <div class="form-group">
+            <label class="form-label form-label-required">Format</label>
+            <select name="format" class="form-select" required>
+                <option value="csv">CSV (Microsoft Excel Compatible)</option>
+            </select>
+        </div>
+
+        <div class="form-group-row">
+            <div class="form-group">
+                <label class="form-label">From Date</label>
+                <input type="date" name="date_from" class="form-input">
+                <p class="form-helper-text">Optional: Leave blank for all dates</p>
+            </div>
+            <div class="form-group">
+                <label class="form-label">To Date</label>
+                <input type="date" name="date_to" class="form-input">
+                <p class="form-helper-text">Optional: Leave blank for all dates</p>
+            </div>
+        </div>
+
+        <div class="form-group">
+            <label class="form-label">Filter by Status</label>
+            <select name="status" class="form-select">
+                <option value="">-- All Statuses --</option>
+                <option value="submitted">Pending Review</option>
+                <option value="approved">Approved</option>
+                <option value="rejected">Rejected</option>
+                <option value="needs_revision">Needs Revision</option>
+                <option value="reviewed">Reviewed</option>
+            </select>
+            <p class="form-helper-text">Optional: Select a status to filter submissions</p>
+        </div>
+
+        <div class="form-actions">
+            <button type="submit" class="btn btn-primary btn-lg">
+                📥 Export Submissions
+            </button>
+        </div>
+    </form>
+</div>
+
+<div class="card mt-8">
+    <div class="card-header">Export Information</div>
+    <div class="card-body">
+        <div class="mb-6">
+            <h3 class="title-small mb-2">What's Included in the Export</h3>
+            <ul class="flex flex-col gap-2">
+                <li class="flex gap-2">
+                    <span>✓</span>
+                    <span>Submission ID and Patient Information</span>
+                </li>
+                <li class="flex gap-2">
+                    <span>✓</span>
+                    <span>Form Name and Associated Disease</span>
+                </li>
+                <li class="flex gap-2">
+                    <span>✓</span>
+                    <span>Hospital and Doctor Information</span>
+                </li>
+                <li class="flex gap-2">
+                    <span>✓</span>
+                    <span>Submission Status and Timestamps</span>
+                </li>
+            </ul>
+        </div>
+
+        <div>
+            <h3 class="title-small mb-2">File Format Details</h3>
+            <p class="body-medium">The exported file will be in CSV format, compatible with Microsoft Excel and other spreadsheet applications. Each row represents one submission, with columns for all available data.</p>
+        </div>
+    </div>
+</div>
+{% endblock %}
