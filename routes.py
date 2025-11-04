@@ -437,3 +437,55 @@ def submit_form():
 def user_view_submission(id):
     submission = Submission.query.filter_by(id=id, user_id=current_user.id).first_or_404()
     return render_template('user/submission_detail.html', submission=submission)
+
+# Export Routes
+@app.route('/user/submissions/<int:id>/download-pdf')
+@login_required
+def download_submission_pdf(id):
+    from flask import send_file
+    from export_utils import generate_submission_pdf
+
+    submission = Submission.query.filter_by(id=id, user_id=current_user.id).first_or_404()
+
+    pdf_buffer = generate_submission_pdf(submission)
+
+    return send_file(
+        pdf_buffer,
+        mimetype='application/pdf',
+        as_attachment=True,
+        download_name=f'submission_{submission.id}_{submission.form.name.replace(" ", "_")}.pdf'
+    )
+
+@app.route('/user/submissions/<int:id>/download-csv')
+@login_required
+def download_submission_csv(id):
+    from flask import send_file
+    from export_utils import generate_submissions_csv
+
+    submission = Submission.query.filter_by(id=id, user_id=current_user.id).first_or_404()
+
+    csv_buffer = generate_submissions_csv([submission], include_field_data=False)
+
+    return send_file(
+        io.BytesIO(csv_buffer.getvalue().encode()),
+        mimetype='text/csv',
+        as_attachment=True,
+        download_name=f'submission_{submission.id}.csv'
+    )
+
+@app.route('/admin/submissions/<int:id>/download-pdf')
+@login_required
+@admin_required
+def admin_download_submission_pdf(id):
+    from flask import send_file
+    from export_utils import generate_submission_pdf
+
+    submission = Submission.query.get_or_404(id)
+    pdf_buffer = generate_submission_pdf(submission)
+
+    return send_file(
+        pdf_buffer,
+        mimetype='application/pdf',
+        as_attachment=True,
+        download_name=f'submission_{submission.id}_{submission.form.name.replace(" ", "_")}.pdf'
+    )
