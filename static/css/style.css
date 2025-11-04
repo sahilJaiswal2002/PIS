@@ -366,7 +366,8 @@ a:hover {
 
 /* ===== Authentication ===== */
 
-.auth-page-wrapper {
+.auth-page-wrapper,
+.auth-container {
     display: flex;
     align-items: center;
     justify-content: center;
@@ -375,7 +376,8 @@ a:hover {
     padding: var(--md-sys-spacing-4);
 }
 
-.auth-card-wrapper {
+.auth-card-wrapper,
+.auth-card {
     background: var(--md-sys-color-surface);
     padding: var(--md-sys-spacing-8);
     border-radius: var(--md-sys-shape-corner-large);
@@ -386,43 +388,55 @@ a:hover {
     flex-direction: column;
 }
 
-.auth-card-header {
+.auth-card-header,
+.auth-header {
     text-align: center;
     margin-bottom: var(--md-sys-spacing-8);
 }
 
-.auth-card-header h1 {
+.auth-card-header h1,
+.auth-header h1 {
     font-size: var(--md-sys-typescale-headline-medium-font-size);
     color: var(--md-sys-color-primary);
     margin-bottom: var(--md-sys-spacing-1);
     font-weight: 600;
 }
 
-.auth-card-header p {
+.auth-card-header p,
+.auth-header p {
     font-size: var(--md-sys-typescale-body-medium-font-size);
     color: var(--md-sys-color-on-surface-variant);
     margin: 0;
 }
 
-.auth-form-container h2 {
+.auth-form-container h2,
+.auth-form h2 {
     font-size: var(--md-sys-typescale-title-large-font-size);
     margin-bottom: var(--md-sys-spacing-6);
     color: var(--md-sys-color-on-surface);
 }
 
-.auth-card-footer {
+.auth-card-footer,
+.auth-footer {
     margin-top: var(--md-sys-spacing-5);
     text-align: center;
     font-size: var(--md-sys-typescale-body-small-font-size);
 }
 
-.auth-card-footer a {
+.auth-card-footer a,
+.auth-footer a {
     color: var(--md-sys-color-primary);
     font-weight: 500;
 }
 
-.auth-card-footer a:hover {
+.auth-card-footer a:hover,
+.auth-footer a:hover {
     text-decoration: underline;
+}
+
+.auth-form {
+    display: flex;
+    flex-direction: column;
 }
 
 /* ===== Admin Layout ===== */
