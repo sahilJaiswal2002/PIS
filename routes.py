@@ -115,6 +115,29 @@ def setup():
     except Exception as e:
         return jsonify({'status': 'error', 'message': str(e)}), 500
 
+@app.route('/dev-login')
+def dev_login():
+    """Direct login for development - logs in as admin"""
+    try:
+        admin = User.query.filter_by(username='admin', is_admin=True).first()
+        if admin:
+            login_user(admin)
+            return redirect(url_for('admin_dashboard'))
+        else:
+            # Create admin if doesn't exist
+            admin = User(
+                username='admin',
+                email='admin@iitb.ac.in',
+                password=generate_password_hash('admin123'),
+                is_admin=True
+            )
+            db.session.add(admin)
+            db.session.commit()
+            login_user(admin)
+            return redirect(url_for('admin_dashboard'))
+    except Exception as e:
+        return jsonify({'status': 'error', 'message': str(e)}), 500
+
 # Admin Routes
 @app.route('/admin')
 @login_required
