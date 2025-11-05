@@ -158,11 +158,19 @@ def admin_dashboard():
             flash('You need admin privileges to access this page.', 'error')
             return redirect(url_for('index'))
 
-    disease_count = Disease.query.count()
-    hospital_count = Hospital.query.count()
-    doctor_count = Doctor.query.count()
-    form_count = Form.query.count()
-    submission_count = Submission.query.count()
+    try:
+        disease_count = Disease.query.count()
+        hospital_count = Hospital.query.count()
+        doctor_count = Doctor.query.count()
+        form_count = Form.query.count()
+        submission_count = Submission.query.count()
+    except:
+        # Database initialization error - show zero counts
+        disease_count = 0
+        hospital_count = 0
+        doctor_count = 0
+        form_count = 0
+        submission_count = 0
 
     return render_template('admin/dashboard.html',
                          disease_count=disease_count,
