@@ -6,28 +6,49 @@
 <div class="auth-container">
     <div class="auth-card">
         <div class="auth-header">
-            <h1>IITB SCAN</h1>
-            <p>Patient Data Collection System</p>
+            <h1>🏥 IITB SCAN</h1>
+            <p>Medical Data Collection System</p>
         </div>
-        
+
         <form method="POST" class="auth-form">
-            <h2>Login</h2>
-            
+            <h2>Welcome Back</h2>
+
             <div class="form-group">
-                <label for="username">Username</label>
-                <input type="text" id="username" name="username" required autofocus>
+                <label for="username">
+                    <span>👤</span>
+                    <span>Username</span>
+                </label>
+                <input
+                    type="text"
+                    id="username"
+                    name="username"
+                    required
+                    autofocus
+                    placeholder="Enter your username"
+                    autocomplete="username"
+                >
             </div>
-            
+
             <div class="form-group">
-                <label for="password">Password</label>
-                <input type="password" id="password" name="password" required>
+                <label for="password">
+                    <span>🔐</span>
+                    <span>Password</span>
+                </label>
+                <input
+                    type="password"
+                    id="password"
+                    name="password"
+                    required
+                    placeholder="Enter your password"
+                    autocomplete="current-password"
+                >
             </div>
-            
-            <button type="submit" class="btn btn-primary btn-block">Login</button>
-            
+
+            <button type="submit" class="btn btn-primary btn-block">Sign In →</button>
+
             <div class="auth-footer">
-                <p>Don't have an account? <a href="{{ url_for('register') }}">Register here</a></p>
-                <p class="text-muted">Default admin: username='admin', password='admin123'</p>
+                <p>New here? <a href="{{ url_for('register') }}">Create an account</a></p>
+                <p class="text-muted">📌 Demo: username='admin' | password='admin123'</p>
             </div>
         </form>
     </div>
