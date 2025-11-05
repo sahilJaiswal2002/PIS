@@ -1,4 +1,4 @@
-from flask import render_template, request, redirect, url_for, flash, jsonify
+from flask import render_template, request, redirect, url_for, flash, jsonify, Response, send_file
 from flask_login import login_required, current_user
 from functools import wraps
 from datetime import datetime, timedelta
@@ -10,6 +10,11 @@ from app import app, db
 from models import (
     User, Disease, Hospital, Doctor, Form, FormField, Submission, 
     SubmissionReview, DraftSubmission, AuditLog
+)
+from export_utils import (
+    generate_submission_pdf, generate_submission_excel, 
+    generate_submissions_excel, generate_submissions_csv, 
+    generate_detailed_submissions_csv
 )
 
 def admin_required(f):
@@ -353,12 +358,13 @@ def audit_logs():
 @login_required
 @admin_required
 def export_submissions():
-    """Export submissions to CSV"""
+    """Export submissions to CSV or Excel"""
     if request.method == 'POST':
         format_type = request.form.get('format', 'csv')
         date_from = request.form.get('date_from')
         date_to = request.form.get('date_to')
         status_filter = request.form.get('status', '')
+        include_fields = request.form.get('include_fields', 'no') == 'yes'
         
         query = Submission.query
         
@@ -376,35 +382,50 @@ def export_submissions():
         
         submissions = query.order_by(Submission.created_at.desc()).all()
         
-        if format_type == 'csv':
-            output = io.StringIO()
-            writer = csv.writer(output)
-            writer.writerow([
-                'ID', 'Patient', 'Form', 'Disease', 'Hospital', 'Doctor',
-                'Status', 'Created At', 'Updated At'
-            ])
-            
-            for sub in submissions:
-                writer.writerow([
-                    sub.id,
-                    sub.user.username,
-                    sub.form.name,
-                    sub.disease.name,
-                    sub.hospital.name,
-                    sub.doctor.name,
-                    sub.status,
-                    sub.created_at.strftime('%Y-%m-%d %H:%M:%S'),
-                    sub.updated_at.strftime('%Y-%m-%d %H:%M:%S')
-                ])
+        if format_type == 'excel':
+            excel_buffer = generate_submissions_excel(submissions)
             
             log_audit('Export', 'Submission', None, f'{len(submissions)} submissions', 
                      {'format': format_type, 'count': len(submissions)})
             
-            from flask import Response
+            return send_file(
+                excel_buffer,
+                mimetype='application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+                as_attachment=True,
+                download_name=f'submissions_{datetime.now().strftime("%Y%m%d_%H%M%S")}.xlsx'
+            )
+        elif format_type == 'csv':
+            if include_fields:
+                output = generate_detailed_submissions_csv(submissions)
+            else:
+                output = io.StringIO()
+                writer = csv.writer(output)
+                writer.writerow([
+                    'ID', 'Patient', 'Form', 'Disease', 'Hospital', 'Doctor',
+                    'Status', 'Created At', 'Updated At'
+                ])
+                
+                for sub in submissions:
+                    writer.writerow([
+                        sub.id,
+                        sub.user.username,
+                        sub.form.name,
+                        sub.disease.name,
+                        sub.hospital.name,
+                        sub.doctor.name,
+                        sub.status,
+                        sub.created_at.strftime('%Y-%m-%d %H:%M:%S'),
+                        sub.updated_at.strftime('%Y-%m-%d %H:%M:%S')
+                    ])
+                output.seek(0)
+            
+            log_audit('Export', 'Submission', None, f'{len(submissions)} submissions', 
+                     {'format': format_type, 'count': len(submissions)})
+            
             return Response(
                 output.getvalue(),
                 mimetype='text/csv',
-                headers={'Content-Disposition': 'attachment;filename=submissions.csv'}
+                headers={'Content-Disposition': f'attachment;filename=submissions_{datetime.now().strftime("%Y%m%d_%H%M%S")}.csv'}
             )
     
     return render_template('admin/export.html')

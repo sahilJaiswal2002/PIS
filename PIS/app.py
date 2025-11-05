@@ -2,6 +2,8 @@ from flask import Flask
 from flask_sqlalchemy import SQLAlchemy
 from flask_login import LoginManager
 import os
+import secrets
+import string
 
 app = Flask(__name__)
 app.config['SECRET_KEY'] = os.environ.get('SESSION_SECRET', 'dev-secret-key-change-in-production')
@@ -27,14 +29,26 @@ if __name__ == '__main__':
         
         admin = User.query.filter_by(username='admin').first()
         if not admin:
+            admin_password = os.environ.get('ADMIN_PASSWORD')
+            if not admin_password:
+                alphabet = string.ascii_letters + string.digits + string.punctuation
+                admin_password = ''.join(secrets.choice(alphabet) for _ in range(20))
+                print("=" * 80)
+                print("IMPORTANT: Auto-generated admin password (save this securely!):")
+                print(f"  Username: admin")
+                print(f"  Password: {admin_password}")
+                print("=" * 80)
+                print("Set the ADMIN_PASSWORD environment variable to use a custom password.")
+                print("=" * 80)
+            
             admin = User(
                 username='admin',
                 email='admin@iitb.ac.in',
-                password=generate_password_hash('admin123'),
+                password=generate_password_hash(admin_password),
                 is_admin=True
             )
             db.session.add(admin)
             db.session.commit()
-            print("Default admin user created: username='admin', password='admin123'")
     
-    app.run(host='0.0.0.0', port=5000, debug=True)
+    debug_mode = os.environ.get('FLASK_DEBUG', 'False').lower() in ('true', '1', 't')
+    app.run(host='0.0.0.0', port=5000, debug=debug_mode)

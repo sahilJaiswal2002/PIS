@@ -28,15 +28,6 @@ def index():
             return redirect(url_for('admin_dashboard'))
         else:
             return redirect(url_for('user_dashboard'))
-    # Check for dev parameter
-    if request.args.get('dev') == '1':
-        try:
-            admin = User.query.filter_by(username='admin', is_admin=True).first()
-            if admin:
-                login_user(admin)
-                return redirect(url_for('admin_dashboard'))
-        except:
-            pass
     return redirect(url_for('login'))
 
 @app.route('/login', methods=['GET', 'POST'])
@@ -91,73 +82,13 @@ def logout():
     logout_user()
     return redirect(url_for('login'))
 
-@app.route('/setup', methods=['GET', 'POST'])
-def setup():
-    """Setup endpoint to initialize admin user and test database"""
-    if request.method == 'POST':
-        try:
-            # Delete all users and recreate admin
-            User.query.delete()
-            db.session.commit()
-
-            admin = User(
-                username='admin',
-                email='admin@iitb.ac.in',
-                password=generate_password_hash('admin123'),
-                is_admin=True
-            )
-            db.session.add(admin)
-            db.session.commit()
-
-            return jsonify({'status': 'success', 'message': 'Admin user created successfully', 'username': 'admin', 'password': 'admin123'})
-        except Exception as e:
-            db.session.rollback()
-            return jsonify({'status': 'error', 'message': str(e)}), 500
-
-    # GET request - check admin user exists
-    try:
-        admin = User.query.filter_by(username='admin').first()
-        if admin:
-            return jsonify({'status': 'ok', 'message': 'Admin user exists', 'admin_id': admin.id})
-        else:
-            return jsonify({'status': 'not_found', 'message': 'Admin user not found. POST to create.'})
-    except Exception as e:
-        return jsonify({'status': 'error', 'message': str(e)}), 500
-
-@app.route('/dev-login')
-def dev_login():
-    """Direct login for development - logs in as admin"""
-    try:
-        admin = User.query.filter_by(username='admin', is_admin=True).first()
-        if admin:
-            login_user(admin)
-            return redirect(url_for('admin_dashboard'))
-        else:
-            # Create admin if doesn't exist
-            admin = User(
-                username='admin',
-                email='admin@iitb.ac.in',
-                password=generate_password_hash('admin123'),
-                is_admin=True
-            )
-            db.session.add(admin)
-            db.session.commit()
-            login_user(admin)
-            return redirect(url_for('admin_dashboard'))
-    except Exception as e:
-        return jsonify({'status': 'error', 'message': str(e)}), 500
 
 # Admin Routes
 @app.route('/admin')
 @app.route('/admin/dashboard')
+@login_required
+@admin_required
 def admin_dashboard():
-    # Allow access for development - check authentication
-    if not current_user.is_authenticated or not current_user.is_admin:
-        # For dev: check if ?dev=1 parameter is passed
-        if request.args.get('dev') != '1':
-            flash('You need admin privileges to access this page.', 'error')
-            return redirect(url_for('index'))
-
     try:
         disease_count = Disease.query.count()
         hospital_count = Hospital.query.count()
@@ -601,4 +532,36 @@ def admin_download_submission_pdf(id):
         mimetype='application/pdf',
         as_attachment=True,
         download_name=f'submission_{submission.id}_{submission.form.name.replace(" ", "_")}.pdf'
+    )
+
+@app.route('/user/submissions/<int:id>/download-excel')
+@login_required
+def download_submission_excel(id):
+    from export_utils import generate_submission_excel
+
+    submission = Submission.query.filter_by(id=id, user_id=current_user.id).first_or_404()
+
+    excel_buffer = generate_submission_excel(submission)
+
+    return send_file(
+        excel_buffer,
+        mimetype='application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+        as_attachment=True,
+        download_name=f'submission_{submission.id}_{submission.form.name.replace(" ", "_")}.xlsx'
+    )
+
+@app.route('/admin/submissions/<int:id>/download-excel')
+@login_required
+@admin_required
+def admin_download_submission_excel(id):
+    from export_utils import generate_submission_excel
+
+    submission = Submission.query.get_or_404(id)
+    excel_buffer = generate_submission_excel(submission)
+
+    return send_file(
+        excel_buffer,
+        mimetype='application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+        as_attachment=True,
+        download_name=f'submission_{submission.id}_{submission.form.name.replace(" ", "_")}.xlsx'
     )

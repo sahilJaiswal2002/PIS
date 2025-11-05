@@ -8,6 +8,9 @@ from reportlab.lib.styles import getSampleStyleSheet, ParagraphStyle
 from reportlab.lib.units import inch
 from reportlab.platypus import SimpleDocTemplate, Table, TableStyle, Paragraph, Spacer, PageBreak
 from reportlab.lib.enums import TA_CENTER, TA_LEFT, TA_RIGHT
+from openpyxl import Workbook
+from openpyxl.styles import Font, PatternFill, Alignment, Border, Side
+from openpyxl.utils import get_column_letter
 
 
 def generate_submission_pdf(submission):
@@ -201,3 +204,198 @@ def generate_detailed_submissions_csv(submissions):
     
     output.seek(0)
     return output
+
+
+def generate_submission_excel(submission):
+    """Generate an Excel file from a single submission"""
+    wb = Workbook()
+    ws = wb.active
+    ws.title = f"Submission {submission.id}"
+    
+    # Styling
+    header_fill = PatternFill(start_color="2196F3", end_color="2196F3", fill_type="solid")
+    header_font = Font(bold=True, color="FFFFFF", size=12)
+    subheader_fill = PatternFill(start_color="E3F2FD", end_color="E3F2FD", fill_type="solid")
+    subheader_font = Font(bold=True, size=11)
+    border = Border(
+        left=Side(style='thin'),
+        right=Side(style='thin'),
+        top=Side(style='thin'),
+        bottom=Side(style='thin')
+    )
+    
+    # Title
+    ws.merge_cells('A1:B1')
+    ws['A1'] = 'IITB SCAN - Form Submission'
+    ws['A1'].font = Font(bold=True, size=14, color="2196F3")
+    ws['A1'].alignment = Alignment(horizontal='center')
+    
+    # Submission Details Section
+    ws['A3'] = 'Submission Details'
+    ws['A3'].font = subheader_font
+    ws['A3'].fill = subheader_fill
+    ws.merge_cells('A3:B3')
+    
+    metadata = [
+        ['Submission ID', str(submission.id)],
+        ['Patient Name', submission.user.username],
+        ['Patient Email', submission.user.email],
+        ['Form Name', submission.form.name],
+        ['Disease', submission.disease.name],
+        ['Hospital', submission.hospital.name],
+        ['Doctor', submission.doctor.name],
+        ['Status', submission.status.title()],
+        ['Submitted On', submission.created_at.strftime('%B %d, %Y at %H:%M:%S')],
+        ['Updated On', submission.updated_at.strftime('%B %d, %Y at %H:%M:%S')],
+    ]
+    
+    row = 4
+    for field, value in metadata:
+        ws[f'A{row}'] = field
+        ws[f'B{row}'] = value
+        ws[f'A{row}'].font = Font(bold=True)
+        ws[f'A{row}'].fill = PatternFill(start_color="F5F5F5", end_color="F5F5F5", fill_type="solid")
+        ws[f'A{row}'].border = border
+        ws[f'B{row}'].border = border
+        row += 1
+    
+    # Form Responses Section
+    row += 1
+    ws[f'A{row}'] = 'Form Responses'
+    ws[f'A{row}'].font = subheader_font
+    ws[f'A{row}'].fill = subheader_fill
+    ws.merge_cells(f'A{row}:B{row}')
+    
+    row += 1
+    ws[f'A{row}'] = 'Field'
+    ws[f'B{row}'] = 'Response'
+    ws[f'A{row}'].font = header_font
+    ws[f'B{row}'].font = header_font
+    ws[f'A{row}'].fill = header_fill
+    ws[f'B{row}'].fill = header_fill
+    ws[f'A{row}'].border = border
+    ws[f'B{row}'].border = border
+    
+    submission_data = json.loads(submission.data)
+    row += 1
+    for field in submission.form.fields:
+        field_key = f'field_{field.field_name}'
+        value = submission_data.get(field_key, 'Not provided')
+        ws[f'A{row}'] = field.field_label
+        ws[f'B{row}'] = str(value)
+        ws[f'A{row}'].border = border
+        ws[f'B{row}'].border = border
+        ws[f'B{row}'].alignment = Alignment(wrap_text=True, vertical='top')
+        row += 1
+    
+    # Adjust column widths
+    ws.column_dimensions['A'].width = 25
+    ws.column_dimensions['B'].width = 50
+    
+    # Add footer
+    row += 1
+    ws.merge_cells(f'A{row}:B{row}')
+    ws[f'A{row}'] = f"Generated on {datetime.now().strftime('%B %d, %Y at %H:%M:%S')} | IITB SCAN - Patient Data Collection System"
+    ws[f'A{row}'].font = Font(size=9, color="808080", italic=True)
+    ws[f'A{row}'].alignment = Alignment(horizontal='center')
+    
+    # Save to BytesIO
+    excel_buffer = io.BytesIO()
+    wb.save(excel_buffer)
+    excel_buffer.seek(0)
+    return excel_buffer
+
+
+def generate_submissions_excel(submissions):
+    """Generate an Excel file from multiple submissions with all form field data"""
+    wb = Workbook()
+    ws = wb.active
+    ws.title = 'Submissions'
+    
+    if not submissions:
+        return io.BytesIO()
+    
+    # Styling
+    header_fill = PatternFill(start_color="2196F3", end_color="2196F3", fill_type="solid")
+    header_font = Font(bold=True, color="FFFFFF", size=11)
+    border = Border(
+        left=Side(style='thin'),
+        right=Side(style='thin'),
+        top=Side(style='thin'),
+        bottom=Side(style='thin')
+    )
+    
+    # Build header with all possible fields
+    all_fields = []
+    field_set = set()
+    for sub in submissions:
+        for field in sub.form.fields:
+            if field.field_label not in field_set:
+                all_fields.append(field.field_label)
+                field_set.add(field.field_label)
+    
+    header = ['ID', 'Patient', 'Email', 'Form', 'Disease', 'Hospital', 'Doctor', 'Status', 'Created At', 'Updated At']
+    header.extend(all_fields)
+    
+    # Write header
+    for col_num, header_text in enumerate(header, 1):
+        cell = ws.cell(row=1, column=col_num)
+        cell.value = header_text
+        cell.font = header_font
+        cell.fill = header_fill
+        cell.border = border
+        cell.alignment = Alignment(horizontal='center', vertical='center')
+    
+    # Write data rows
+    for row_num, submission in enumerate(submissions, 2):
+        submission_data = json.loads(submission.data)
+        
+        # Basic info
+        row_data = [
+            submission.id,
+            submission.user.username,
+            submission.user.email,
+            submission.form.name,
+            submission.disease.name,
+            submission.hospital.name,
+            submission.doctor.name,
+            submission.status.title(),
+            submission.created_at.strftime('%Y-%m-%d %H:%M:%S'),
+            submission.updated_at.strftime('%Y-%m-%d %H:%M:%S')
+        ]
+        
+        # Add field data
+        for field_label in all_fields:
+            # Find the field in this submission's form
+            value = ''
+            for field in submission.form.fields:
+                if field.field_label == field_label:
+                    field_key = f'field_{field.field_name}'
+                    value = submission_data.get(field_key, '')
+                    break
+            row_data.append(str(value))
+        
+        # Write row
+        for col_num, cell_value in enumerate(row_data, 1):
+            cell = ws.cell(row=row_num, column=col_num)
+            cell.value = cell_value
+            cell.border = border
+            if col_num > 10:  # Form field columns
+                cell.alignment = Alignment(wrap_text=True, vertical='top')
+    
+    # Adjust column widths
+    for col_num in range(1, len(header) + 1):
+        column_letter = get_column_letter(col_num)
+        if col_num <= 10:
+            ws.column_dimensions[column_letter].width = 15
+        else:
+            ws.column_dimensions[column_letter].width = 20
+    
+    # Freeze first row
+    ws.freeze_panes = 'A2'
+    
+    # Save to BytesIO
+    excel_buffer = io.BytesIO()
+    wb.save(excel_buffer)
+    excel_buffer.seek(0)
+    return excel_buffer
