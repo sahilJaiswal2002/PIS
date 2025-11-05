@@ -1,0 +1,55 @@
+{% extends "user/base.html" %}
+
+{% block title %}Select Hospital - Patient Portal{% endblock %}
+
+{% block content %}
+<div class="stepper-container">
+    <div class="stepper">
+        <div class="step step-completed">
+            <div class="step-number">✓</div>
+            <div class="step-label">Disease</div>
+        </div>
+        <div class="step step-active">
+            <div class="step-number">2</div>
+            <div class="step-label">Hospital</div>
+        </div>
+        <div class="step">
+            <div class="step-number">3</div>
+            <div class="step-label">Doctor</div>
+        </div>
+        <div class="step">
+            <div class="step-number">4</div>
+            <div class="step-label">Form</div>
+        </div>
+    </div>
+</div>
+
+<div class="page-header">
+    <h1>Step 2: Select Hospital</h1>
+    <p class="text-muted">Disease: <strong>{{ disease.name }}</strong></p>
+    <a href="{{ url_for('select_disease') }}" class="btn btn-sm btn-secondary">← Back</a>
+</div>
+
+{% if hospitals %}
+    <div class="selection-grid">
+        {% for hospital in hospitals %}
+        <a href="{{ url_for('select_doctor', disease_id=disease.id, hospital_id=hospital.id) }}" class="selection-card">
+            <div class="selection-card-icon">🏥</div>
+            <h3>{{ hospital.name }}</h3>
+            {% if hospital.address %}
+                <p class="text-muted"><small>📍 {{ hospital.address }}</small></p>
+            {% endif %}
+            {% if hospital.phone %}
+                <p class="text-muted"><small>📞 {{ hospital.phone }}</small></p>
+            {% endif %}
+        </a>
+        {% endfor %}
+    </div>
+{% else %}
+    <div class="empty-state">
+        <div class="empty-state-icon">❌</div>
+        <h3>No hospitals available</h3>
+        <p>Please contact the administrator to add hospitals</p>
+    </div>
+{% endif %}
+{% endblock %}

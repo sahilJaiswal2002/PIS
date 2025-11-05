@@ -1,0 +1,60 @@
+{% extends "user/base.html" %}
+
+{% block title %}Select Doctor - Patient Portal{% endblock %}
+
+{% block content %}
+<div class="stepper-container">
+    <div class="stepper">
+        <div class="step step-completed">
+            <div class="step-number">✓</div>
+            <div class="step-label">Disease</div>
+        </div>
+        <div class="step step-completed">
+            <div class="step-number">✓</div>
+            <div class="step-label">Hospital</div>
+        </div>
+        <div class="step step-active">
+            <div class="step-number">3</div>
+            <div class="step-label">Doctor</div>
+        </div>
+        <div class="step">
+            <div class="step-number">4</div>
+            <div class="step-label">Form</div>
+        </div>
+    </div>
+</div>
+
+<div class="page-header">
+    <h1>Step 3: Select Doctor</h1>
+    <p class="text-muted">Disease: <strong>{{ disease.name }}</strong> | Hospital: <strong>{{ hospital.name }}</strong></p>
+    <a href="{{ url_for('select_hospital', disease_id=disease.id) }}" class="btn btn-sm btn-secondary">← Back</a>
+</div>
+
+{% if doctors %}
+    <div class="selection-grid">
+        {% for doctor in doctors %}
+        <a href="{{ url_for('fill_form', disease_id=disease.id, hospital_id=hospital.id, doctor_id=doctor.id) }}" class="selection-card">
+            <div class="selection-card-icon">👨‍⚕️</div>
+            <h3>{{ doctor.name }}</h3>
+            {% if doctor.specialization %}
+                <p class="text-muted">{{ doctor.specialization }}</p>
+            {% endif %}
+            {% if doctor.diseases %}
+                <div class="doctor-diseases">
+                    {% for disease_item in doctor.diseases %}
+                        <span class="badge badge-sm">{{ disease_item.name }}</span>
+                    {% endfor %}
+                </div>
+            {% endif %}
+        </a>
+        {% endfor %}
+    </div>
+{% else %}
+    <div class="empty-state">
+        <div class="empty-state-icon">❌</div>
+        <h3>No doctors available</h3>
+        <p>No doctors found for this hospital and disease combination</p>
+        <a href="{{ url_for('select_hospital', disease_id=disease.id) }}" class="btn btn-secondary">Choose Another Hospital</a>
+    </div>
+{% endif %}
+{% endblock %}
