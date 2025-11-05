@@ -82,6 +82,39 @@ def logout():
     logout_user()
     return redirect(url_for('login'))
 
+@app.route('/setup', methods=['GET', 'POST'])
+def setup():
+    """Setup endpoint to initialize admin user and test database"""
+    if request.method == 'POST':
+        try:
+            # Delete all users and recreate admin
+            User.query.delete()
+            db.session.commit()
+
+            admin = User(
+                username='admin',
+                email='admin@iitb.ac.in',
+                password=generate_password_hash('admin123'),
+                is_admin=True
+            )
+            db.session.add(admin)
+            db.session.commit()
+
+            return jsonify({'status': 'success', 'message': 'Admin user created successfully', 'username': 'admin', 'password': 'admin123'})
+        except Exception as e:
+            db.session.rollback()
+            return jsonify({'status': 'error', 'message': str(e)}), 500
+
+    # GET request - check admin user exists
+    try:
+        admin = User.query.filter_by(username='admin').first()
+        if admin:
+            return jsonify({'status': 'ok', 'message': 'Admin user exists', 'admin_id': admin.id})
+        else:
+            return jsonify({'status': 'not_found', 'message': 'Admin user not found. POST to create.'})
+    except Exception as e:
+        return jsonify({'status': 'error', 'message': str(e)}), 500
+
 # Admin Routes
 @app.route('/admin')
 @login_required
