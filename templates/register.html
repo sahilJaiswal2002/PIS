@@ -6,32 +6,63 @@
 <div class="auth-container">
     <div class="auth-card">
         <div class="auth-header">
-            <h1>IITB SCAN</h1>
-            <p>Patient Data Collection System</p>
+            <h1>🏥 IITB SCAN</h1>
+            <p>Medical Data Collection System</p>
         </div>
-        
+
         <form method="POST" class="auth-form">
-            <h2>Register</h2>
-            
+            <h2>Create Account</h2>
+
             <div class="form-group">
-                <label for="username">Username</label>
-                <input type="text" id="username" name="username" required autofocus>
+                <label for="username">
+                    <span>👤</span>
+                    <span>Username</span>
+                </label>
+                <input
+                    type="text"
+                    id="username"
+                    name="username"
+                    required
+                    autofocus
+                    placeholder="Choose a unique username"
+                    autocomplete="username"
+                >
             </div>
-            
+
             <div class="form-group">
-                <label for="email">Email</label>
-                <input type="email" id="email" name="email" required>
+                <label for="email">
+                    <span>📧</span>
+                    <span>Email Address</span>
+                </label>
+                <input
+                    type="email"
+                    id="email"
+                    name="email"
+                    required
+                    placeholder="Enter your email"
+                    autocomplete="email"
+                >
             </div>
-            
+
             <div class="form-group">
-                <label for="password">Password</label>
-                <input type="password" id="password" name="password" required>
+                <label for="password">
+                    <span>🔐</span>
+                    <span>Password</span>
+                </label>
+                <input
+                    type="password"
+                    id="password"
+                    name="password"
+                    required
+                    placeholder="Create a strong password"
+                    autocomplete="new-password"
+                >
             </div>
-            
-            <button type="submit" class="btn btn-primary btn-block">Register</button>
-            
+
+            <button type="submit" class="btn btn-primary btn-block">Create Account →</button>
+
             <div class="auth-footer">
-                <p>Already have an account? <a href="{{ url_for('login') }}">Login here</a></p>
+                <p>Already registered? <a href="{{ url_for('login') }}">Sign in here</a></p>
             </div>
         </form>
     </div>
