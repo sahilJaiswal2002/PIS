@@ -30,15 +30,27 @@
         </ul>
         
         <div class="sidebar-footer">
-            <div class="sidebar-user-info">
-                <div class="sidebar-user-avatar">{{ current_user.username[0].upper() }}</div>
-                <div>
-                    <div class="sidebar-user-name">{{ current_user.username }}</div>
-                    <div class="sidebar-user-role">Administrator</div>
+            {% if current_user.is_authenticated %}
+                <div class="sidebar-user-info">
+                    <div class="sidebar-user-avatar">{{ current_user.username[0].upper() }}</div>
+                    <div>
+                        <div class="sidebar-user-name">{{ current_user.username }}</div>
+                        <div class="sidebar-user-role">Administrator</div>
+                    </div>
                 </div>
-            </div>
-            <button data-toggle-dark-mode class="btn btn-sm btn-text w-full" title="Toggle Dark Mode" style="margin-bottom: var(--md-sys-spacing-3);">🌙 Dark Mode</button>
-            <a href="{{ url_for('logout') }}" class="btn btn-sm btn-outline w-full">Logout</a>
+                <button data-toggle-dark-mode class="btn btn-sm btn-text w-full" title="Toggle Dark Mode" style="margin-bottom: var(--md-sys-spacing-3);">🌙 Dark Mode</button>
+                <a href="{{ url_for('logout') }}" class="btn btn-sm btn-outline w-full">Logout</a>
+            {% else %}
+                <div class="sidebar-user-info">
+                    <div class="sidebar-user-avatar">D</div>
+                    <div>
+                        <div class="sidebar-user-name">Developer</div>
+                        <div class="sidebar-user-role">Dev Mode</div>
+                    </div>
+                </div>
+                <button data-toggle-dark-mode class="btn btn-sm btn-text w-full" title="Toggle Dark Mode" style="margin-bottom: var(--md-sys-spacing-3);">🌙 Dark Mode</button>
+                <a href="{{ url_for('login') }}" class="btn btn-sm btn-outline w-full">Login</a>
+            {% endif %}
         </div>
     </nav>
     
