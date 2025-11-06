@@ -83,7 +83,7 @@ def register():
             is_admin=False
         )
         db.session.add(user)
-        db.session.flush()
+        db.session.commit()
 
         return redirect(url_for('setup_security_questions', user_id=user.id))
 
