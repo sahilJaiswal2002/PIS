@@ -179,8 +179,10 @@ function initializeDarkMode() {
 
     if (isDarkMode) {
         document.documentElement.setAttribute('data-theme', 'dark');
+        updateDarkModeButtons(true);
     } else {
         document.documentElement.removeAttribute('data-theme');
+        updateDarkModeButtons(false);
     }
 }
 
@@ -190,14 +192,22 @@ function toggleDarkMode() {
     if (isDarkMode) {
         document.documentElement.removeAttribute('data-theme');
         localStorage.setItem('darkMode', 'false');
-        const btn = document.querySelector('[data-toggle-dark-mode]');
-        if (btn) btn.textContent = '☀️ Light Mode';
+        updateDarkModeButtons(false);
     } else {
         document.documentElement.setAttribute('data-theme', 'dark');
         localStorage.setItem('darkMode', 'true');
-        const btn = document.querySelector('[data-toggle-dark-mode]');
-        if (btn) btn.textContent = '🌙 Dark Mode';
+        updateDarkModeButtons(true);
     }
+}
+
+function updateDarkModeButtons(isDark) {
+    document.querySelectorAll('[data-toggle-dark-mode]').forEach(function(btn) {
+        if (btn.classList.contains('dark-mode-toggle')) {
+            btn.textContent = isDark ? '☀️' : '🌙';
+        } else {
+            btn.textContent = isDark ? '☀️ Light Mode' : '🌙 Dark Mode';
+        }
+    });
 }
 
 // Add dark mode toggle button functionality

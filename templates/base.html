@@ -23,6 +23,9 @@
     
     {% block content %}{% endblock %}
     
+    <!-- Floating Dark Mode Toggle -->
+    <button data-toggle-dark-mode class="dark-mode-toggle" title="Toggle Dark Mode">🌙</button>
+    
     <script src="{{ url_for('static', filename='js/main.js') }}"></script>
     {% block extra_js %}{% endblock %}
 </body>
