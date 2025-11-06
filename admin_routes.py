@@ -353,58 +353,67 @@ def audit_logs():
 @login_required
 @admin_required
 def export_submissions():
-    """Export submissions to CSV"""
+    """Export submissions to CSV or Excel"""
     if request.method == 'POST':
         format_type = request.form.get('format', 'csv')
         date_from = request.form.get('date_from')
         date_to = request.form.get('date_to')
         status_filter = request.form.get('status', '')
-        
+        include_details = request.form.get('include_details') == 'on'
+
         query = Submission.query
-        
+
         if date_from:
             date_from = datetime.strptime(date_from, '%Y-%m-%d')
             query = query.filter(Submission.created_at >= date_from)
-        
+
         if date_to:
             date_to = datetime.strptime(date_to, '%Y-%m-%d')
             date_to = date_to.replace(hour=23, minute=59, second=59)
             query = query.filter(Submission.created_at <= date_to)
-        
+
         if status_filter:
             query = query.filter(Submission.status == status_filter)
-        
+
         submissions = query.order_by(Submission.created_at.desc()).all()
-        
+
         if format_type == 'csv':
-            output = io.StringIO()
-            writer = csv.writer(output)
-            writer.writerow([
-                'ID', 'Patient', 'Form', 'Disease', 'Hospital', 'Doctor',
-                'Status', 'Created At', 'Updated At'
-            ])
-            
-            for sub in submissions:
-                writer.writerow([
-                    sub.id,
-                    sub.user.username,
-                    sub.form.name,
-                    sub.disease.name,
-                    sub.hospital.name,
-                    sub.doctor.name,
-                    sub.status,
-                    sub.created_at.strftime('%Y-%m-%d %H:%M:%S'),
-                    sub.updated_at.strftime('%Y-%m-%d %H:%M:%S')
-                ])
-            
-            log_audit('Export', 'Submission', None, f'{len(submissions)} submissions', 
-                     {'format': format_type, 'count': len(submissions)})
-            
-            from flask import Response
+            from export_utils import generate_detailed_submissions_csv, generate_submissions_csv
+
+            if include_details:
+                output = generate_detailed_submissions_csv(submissions)
+            else:
+                output = generate_submissions_csv(submissions, include_field_data=False)
+
+            log_audit('Export', 'Submission', None, f'{len(submissions)} submissions',
+                     {'format': format_type, 'count': len(submissions), 'include_details': include_details})
+
             return Response(
                 output.getvalue(),
                 mimetype='text/csv',
                 headers={'Content-Disposition': 'attachment;filename=submissions.csv'}
             )
-    
+
+        elif format_type == 'excel':
+            from export_utils import generate_detailed_submissions_excel, generate_submissions_excel
+
+            try:
+                if include_details:
+                    output = generate_detailed_submissions_excel(submissions)
+                else:
+                    output = generate_submissions_excel(submissions, include_field_data=False)
+
+                log_audit('Export', 'Submission', None, f'{len(submissions)} submissions',
+                         {'format': format_type, 'count': len(submissions), 'include_details': include_details})
+
+                return send_file(
+                    output,
+                    mimetype='application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+                    as_attachment=True,
+                    download_name=f'submissions_{datetime.now().strftime("%Y%m%d_%H%M%S")}.xlsx'
+                )
+            except ImportError:
+                flash('Excel export not available. Please install openpyxl with: pip install openpyxl', 'error')
+                return render_template('admin/export.html')
+
     return render_template('admin/export.html')
