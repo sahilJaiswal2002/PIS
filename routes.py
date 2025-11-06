@@ -96,6 +96,111 @@ def logout():
     logout_user()
     return redirect(url_for('login'))
 
+@app.route('/forgot-password', methods=['GET', 'POST'])
+def forgot_password():
+    if current_user.is_authenticated:
+        return redirect(url_for('index'))
+
+    if request.method == 'POST':
+        username = request.form.get('username')
+        user = User.query.filter_by(username=username).first()
+
+        if not user:
+            flash('Username not found', 'error')
+            return render_template('forgot_password.html')
+
+        security_questions = user.security_questions
+        if not security_questions:
+            flash('No security questions set up for this account. Please contact support.', 'error')
+            return render_template('forgot_password.html')
+
+        # Create a reset token
+        token = secrets.token_urlsafe(32)
+        reset_token = PasswordResetToken(
+            user_id=user.id,
+            token=token,
+            expires_at=datetime.utcnow() + timedelta(hours=1)
+        )
+        db.session.add(reset_token)
+        db.session.commit()
+
+        return redirect(url_for('answer_security_questions', token=token))
+
+    return render_template('forgot_password.html')
+
+@app.route('/answer-security-questions/<token>', methods=['GET', 'POST'])
+def answer_security_questions(token):
+    if current_user.is_authenticated:
+        return redirect(url_for('index'))
+
+    reset_token = PasswordResetToken.query.filter_by(token=token).first_or_404()
+
+    if reset_token.expires_at < datetime.utcnow():
+        flash('Password reset token has expired', 'error')
+        return redirect(url_for('forgot_password'))
+
+    if reset_token.is_verified:
+        return redirect(url_for('reset_password', token=token))
+
+    user = reset_token.user
+    security_questions = user.security_questions
+
+    if request.method == 'POST':
+        all_correct = True
+        for sq in security_questions:
+            answer = request.form.get(f'answer_{sq.id}', '').strip().lower()
+            if answer != sq.answer.lower():
+                all_correct = False
+                break
+
+        if all_correct:
+            reset_token.is_verified = True
+            db.session.commit()
+            return redirect(url_for('reset_password', token=token))
+        else:
+            flash('Incorrect answers. Please try again.', 'error')
+
+    return render_template('answer_security_questions.html',
+                         security_questions=security_questions,
+                         token=token)
+
+@app.route('/reset-password/<token>', methods=['GET', 'POST'])
+def reset_password(token):
+    if current_user.is_authenticated:
+        return redirect(url_for('index'))
+
+    reset_token = PasswordResetToken.query.filter_by(token=token).first_or_404()
+
+    if not reset_token.is_verified:
+        flash('Please verify your security questions first', 'error')
+        return redirect(url_for('answer_security_questions', token=token))
+
+    if reset_token.expires_at < datetime.utcnow():
+        flash('Password reset token has expired', 'error')
+        return redirect(url_for('forgot_password'))
+
+    if request.method == 'POST':
+        password = request.form.get('password')
+        confirm_password = request.form.get('confirm_password')
+
+        if password != confirm_password:
+            flash('Passwords do not match', 'error')
+            return render_template('reset_password.html', token=token)
+
+        if len(password) < 6:
+            flash('Password must be at least 6 characters long', 'error')
+            return render_template('reset_password.html', token=token)
+
+        user = reset_token.user
+        user.password = generate_password_hash(password)
+        db.session.delete(reset_token)
+        db.session.commit()
+
+        flash('Password reset successful! Please login with your new password.', 'success')
+        return redirect(url_for('login'))
+
+    return render_template('reset_password.html', token=token)
+
 @app.route('/setup', methods=['GET', 'POST'])
 def setup():
     """Setup endpoint to initialize admin user and test database"""
