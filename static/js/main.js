@@ -172,10 +172,12 @@ document.querySelectorAll('form').forEach(function(form) {
 // ===== Dark Mode Theme =====
 
 function initializeDarkMode() {
-    const isDarkMode = localStorage.getItem('darkMode') === 'true';
+    const storedDarkMode = localStorage.getItem('darkMode');
     const prefersDark = window.matchMedia('(prefers-color-scheme: dark)').matches;
-    
-    if (isDarkMode || (isDarkMode === null && prefersDark)) {
+
+    const isDarkMode = storedDarkMode === 'true' || (storedDarkMode === null && prefersDark);
+
+    if (isDarkMode) {
         document.documentElement.setAttribute('data-theme', 'dark');
     } else {
         document.documentElement.removeAttribute('data-theme');
@@ -184,13 +186,17 @@ function initializeDarkMode() {
 
 function toggleDarkMode() {
     const isDarkMode = document.documentElement.getAttribute('data-theme') === 'dark';
-    
+
     if (isDarkMode) {
         document.documentElement.removeAttribute('data-theme');
         localStorage.setItem('darkMode', 'false');
+        const btn = document.querySelector('[data-toggle-dark-mode]');
+        if (btn) btn.textContent = '☀️ Light Mode';
     } else {
         document.documentElement.setAttribute('data-theme', 'dark');
         localStorage.setItem('darkMode', 'true');
+        const btn = document.querySelector('[data-toggle-dark-mode]');
+        if (btn) btn.textContent = '🌙 Dark Mode';
     }
 }
 
