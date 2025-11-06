@@ -66,16 +66,16 @@ def login():
 def register():
     if current_user.is_authenticated:
         return redirect(url_for('index'))
-    
+
     if request.method == 'POST':
         username = request.form.get('username')
         password = request.form.get('password')
         email = request.form.get('email')
-        
+
         if User.query.filter_by(username=username).first():
             flash('Username already exists', 'error')
             return render_template('register.html')
-        
+
         user = User(
             username=username,
             email=email,
@@ -83,12 +83,48 @@ def register():
             is_admin=False
         )
         db.session.add(user)
+        db.session.flush()
+
+        return redirect(url_for('setup_security_questions', user_id=user.id))
+
+    return render_template('register.html')
+
+@app.route('/setup-security-questions/<int:user_id>', methods=['GET', 'POST'])
+def setup_security_questions(user_id):
+    user = User.query.get_or_404(user_id)
+
+    if request.method == 'POST':
+        security_questions = SecurityQuestion.query.all()
+
+        if not security_questions:
+            flash('No security questions available. Please try again later.', 'error')
+            return render_template('register.html')
+
+        for q in security_questions[:3]:
+            answer = request.form.get(f'answer_{q.id}', '').strip()
+            if answer:
+                usq = UserSecurityQuestion(
+                    user_id=user.id,
+                    question_id=q.id,
+                    answer=answer
+                )
+                db.session.add(usq)
+
         db.session.commit()
-        
+
         flash('Registration successful! Please login.', 'success')
         return redirect(url_for('login'))
-    
-    return render_template('register.html')
+
+    security_questions = SecurityQuestion.query.all()
+
+    if not security_questions:
+        db.session.commit()
+        flash('Registration successful! Please login.', 'success')
+        return redirect(url_for('login'))
+
+    return render_template('setup_security_questions.html',
+                         user=user,
+                         security_questions=security_questions[:3])
 
 @app.route('/logout')
 @login_required
