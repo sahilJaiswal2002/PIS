@@ -4,8 +4,13 @@ from werkzeug.security import generate_password_hash, check_password_hash
 from functools import wraps
 import json
 import io
+import secrets
+from datetime import datetime, timedelta
 from app import app, db, login_manager
-from models import User, Disease, Hospital, Doctor, Form, FormField, Submission, DraftSubmission
+from models import (
+    User, Disease, Hospital, Doctor, Form, FormField, Submission, DraftSubmission,
+    SecurityQuestion, UserSecurityQuestion, PasswordResetToken
+)
 
 @login_manager.user_loader
 def load_user(user_id):
@@ -61,16 +66,16 @@ def login():
 def register():
     if current_user.is_authenticated:
         return redirect(url_for('index'))
-    
+
     if request.method == 'POST':
         username = request.form.get('username')
         password = request.form.get('password')
         email = request.form.get('email')
-        
+
         if User.query.filter_by(username=username).first():
             flash('Username already exists', 'error')
             return render_template('register.html')
-        
+
         user = User(
             username=username,
             email=email,
@@ -79,17 +84,158 @@ def register():
         )
         db.session.add(user)
         db.session.commit()
-        
+
+        return redirect(url_for('setup_security_questions', user_id=user.id))
+
+    return render_template('register.html')
+
+@app.route('/setup-security-questions/<int:user_id>', methods=['GET', 'POST'])
+def setup_security_questions(user_id):
+    user = User.query.get_or_404(user_id)
+
+    if request.method == 'POST':
+        security_questions = SecurityQuestion.query.all()
+
+        if not security_questions:
+            flash('No security questions available. Please try again later.', 'error')
+            return render_template('register.html')
+
+        for q in security_questions[:3]:
+            answer = request.form.get(f'answer_{q.id}', '').strip()
+            if answer:
+                usq = UserSecurityQuestion(
+                    user_id=user.id,
+                    question_id=q.id,
+                    answer=answer
+                )
+                db.session.add(usq)
+
+        db.session.commit()
+
         flash('Registration successful! Please login.', 'success')
         return redirect(url_for('login'))
-    
-    return render_template('register.html')
+
+    security_questions = SecurityQuestion.query.all()
+
+    if not security_questions:
+        db.session.commit()
+        flash('Registration successful! Please login.', 'success')
+        return redirect(url_for('login'))
+
+    return render_template('setup_security_questions.html',
+                         user=user,
+                         security_questions=security_questions[:3])
 
 @app.route('/logout')
 @login_required
 def logout():
     logout_user()
     return redirect(url_for('login'))
+
+@app.route('/forgot-password', methods=['GET', 'POST'])
+def forgot_password():
+    if current_user.is_authenticated:
+        return redirect(url_for('index'))
+
+    if request.method == 'POST':
+        username = request.form.get('username')
+        user = User.query.filter_by(username=username).first()
+
+        if not user:
+            flash('Username not found', 'error')
+            return render_template('forgot_password.html')
+
+        security_questions = user.security_questions
+        if not security_questions:
+            flash('No security questions set up for this account. Please contact support.', 'error')
+            return render_template('forgot_password.html')
+
+        # Create a reset token
+        token = secrets.token_urlsafe(32)
+        reset_token = PasswordResetToken(
+            user_id=user.id,
+            token=token,
+            expires_at=datetime.utcnow() + timedelta(hours=1)
+        )
+        db.session.add(reset_token)
+        db.session.commit()
+
+        return redirect(url_for('answer_security_questions', token=token))
+
+    return render_template('forgot_password.html')
+
+@app.route('/answer-security-questions/<token>', methods=['GET', 'POST'])
+def answer_security_questions(token):
+    if current_user.is_authenticated:
+        return redirect(url_for('index'))
+
+    reset_token = PasswordResetToken.query.filter_by(token=token).first_or_404()
+
+    if reset_token.expires_at < datetime.utcnow():
+        flash('Password reset token has expired', 'error')
+        return redirect(url_for('forgot_password'))
+
+    if reset_token.is_verified:
+        return redirect(url_for('reset_password', token=token))
+
+    user = reset_token.user
+    security_questions = user.security_questions
+
+    if request.method == 'POST':
+        all_correct = True
+        for sq in security_questions:
+            answer = request.form.get(f'answer_{sq.id}', '').strip().lower()
+            if answer != sq.answer.lower():
+                all_correct = False
+                break
+
+        if all_correct:
+            reset_token.is_verified = True
+            db.session.commit()
+            return redirect(url_for('reset_password', token=token))
+        else:
+            flash('Incorrect answers. Please try again.', 'error')
+
+    return render_template('answer_security_questions.html',
+                         security_questions=security_questions,
+                         token=token)
+
+@app.route('/reset-password/<token>', methods=['GET', 'POST'])
+def reset_password(token):
+    if current_user.is_authenticated:
+        return redirect(url_for('index'))
+
+    reset_token = PasswordResetToken.query.filter_by(token=token).first_or_404()
+
+    if not reset_token.is_verified:
+        flash('Please verify your security questions first', 'error')
+        return redirect(url_for('answer_security_questions', token=token))
+
+    if reset_token.expires_at < datetime.utcnow():
+        flash('Password reset token has expired', 'error')
+        return redirect(url_for('forgot_password'))
+
+    if request.method == 'POST':
+        password = request.form.get('password')
+        confirm_password = request.form.get('confirm_password')
+
+        if password != confirm_password:
+            flash('Passwords do not match', 'error')
+            return render_template('reset_password.html', token=token)
+
+        if len(password) < 6:
+            flash('Password must be at least 6 characters long', 'error')
+            return render_template('reset_password.html', token=token)
+
+        user = reset_token.user
+        user.password = generate_password_hash(password)
+        db.session.delete(reset_token)
+        db.session.commit()
+
+        flash('Password reset successful! Please login with your new password.', 'success')
+        return redirect(url_for('login'))
+
+    return render_template('reset_password.html', token=token)
 
 @app.route('/setup', methods=['GET', 'POST'])
 def setup():

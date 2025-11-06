@@ -9,6 +9,13 @@ from reportlab.lib.units import inch
 from reportlab.platypus import SimpleDocTemplate, Table, TableStyle, Paragraph, Spacer, PageBreak
 from reportlab.lib.enums import TA_CENTER, TA_LEFT, TA_RIGHT
 
+try:
+    from openpyxl import Workbook
+    from openpyxl.styles import Font, PatternFill, Alignment, Border, Side
+    HAS_OPENPYXL = True
+except ImportError:
+    HAS_OPENPYXL = False
+
 
 def generate_submission_pdf(submission):
     """Generate a PDF from a submission"""
@@ -162,20 +169,20 @@ def generate_detailed_submissions_csv(submissions):
     """Generate a detailed CSV with all form field responses"""
     output = io.StringIO()
     writer = csv.writer(output)
-    
+
     if not submissions:
         return output
-    
+
     # Build header with all possible fields
     all_fields = set()
     for sub in submissions:
         for field in sub.form.fields:
             all_fields.add(field.field_label)
-    
+
     header = ['ID', 'Patient', 'Email', 'Form', 'Disease', 'Hospital', 'Doctor', 'Status', 'Created At']
     header.extend(sorted(all_fields))
     writer.writerow(header)
-    
+
     # Write data rows
     for submission in submissions:
         submission_data = json.loads(submission.data)
@@ -190,14 +197,115 @@ def generate_detailed_submissions_csv(submissions):
             submission.status,
             submission.created_at.strftime('%Y-%m-%d %H:%M:%S')
         ]
-        
+
         # Add field data
         for field in submission.form.fields:
             field_key = f'field_{field.field_name}'
             value = submission_data.get(field_key, '')
             row.append(str(value))
-        
+
         writer.writerow(row)
-    
+
     output.seek(0)
     return output
+
+
+def generate_submissions_excel(submissions, include_field_data=False):
+    """Generate an Excel file from submissions"""
+    if not HAS_OPENPYXL:
+        raise ImportError("openpyxl is required for Excel export. Install it with: pip install openpyxl")
+
+    wb = Workbook()
+    ws = wb.active
+    ws.title = "Submissions"
+
+    # Define styles
+    header_fill = PatternFill(start_color="4472C4", end_color="4472C4", fill_type="solid")
+    header_font = Font(bold=True, color="FFFFFF")
+    border = Border(
+        left=Side(style='thin'),
+        right=Side(style='thin'),
+        top=Side(style='thin'),
+        bottom=Side(style='thin')
+    )
+
+    # Header row
+    headers = [
+        'ID', 'Patient', 'Email', 'Form', 'Disease', 'Hospital', 'Doctor',
+        'Status', 'Created At', 'Updated At'
+    ]
+
+    if include_field_data:
+        all_fields = set()
+        for sub in submissions:
+            for field in sub.form.fields:
+                all_fields.add(field.field_label)
+        headers.extend(sorted(all_fields))
+
+    for col_num, header in enumerate(headers, 1):
+        cell = ws.cell(row=1, column=col_num)
+        cell.value = header
+        cell.fill = header_fill
+        cell.font = header_font
+        cell.border = border
+        cell.alignment = Alignment(horizontal="center", vertical="center")
+
+    # Data rows
+    for row_num, submission in enumerate(submissions, 2):
+        submission_data = json.loads(submission.data)
+
+        row_data = [
+            submission.id,
+            submission.user.username,
+            submission.user.email,
+            submission.form.name,
+            submission.disease.name,
+            submission.hospital.name,
+            submission.doctor.name,
+            submission.status,
+            submission.created_at.strftime('%Y-%m-%d %H:%M:%S'),
+            submission.updated_at.strftime('%Y-%m-%d %H:%M:%S')
+        ]
+
+        if include_field_data:
+            for field in submission.form.fields:
+                field_key = f'field_{field.field_name}'
+                value = submission_data.get(field_key, '')
+                row_data.append(str(value))
+
+        for col_num, value in enumerate(row_data, 1):
+            cell = ws.cell(row=row_num, column=col_num)
+            cell.value = value
+            cell.border = border
+            cell.alignment = Alignment(horizontal="left", vertical="top", wrap_text=True)
+
+    # Adjust column widths
+    ws.column_dimensions['A'].width = 8
+    ws.column_dimensions['B'].width = 15
+    ws.column_dimensions['C'].width = 20
+    ws.column_dimensions['D'].width = 20
+    ws.column_dimensions['E'].width = 20
+    ws.column_dimensions['F'].width = 20
+    ws.column_dimensions['G'].width = 15
+    ws.column_dimensions['H'].width = 12
+    ws.column_dimensions['I'].width = 18
+    ws.column_dimensions['J'].width = 18
+
+    for col_num in range(11, len(headers) + 1):
+        ws.column_dimensions[ws.cell(row=1, column=col_num).column_letter].width = 20
+
+    # Freeze header row
+    ws.freeze_panes = "A2"
+
+    output = io.BytesIO()
+    wb.save(output)
+    output.seek(0)
+    return output
+
+
+def generate_detailed_submissions_excel(submissions):
+    """Generate a detailed Excel file with all form field responses"""
+    if not HAS_OPENPYXL:
+        raise ImportError("openpyxl is required for Excel export. Install it with: pip install openpyxl")
+
+    return generate_submissions_excel(submissions, include_field_data=True)

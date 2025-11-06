@@ -1,0 +1,50 @@
+{% extends "base.html" %}
+
+{% block title %}Setup Security Questions - IITB SCAN{% endblock %}
+
+{% block content %}
+<div class="auth-container">
+    <div class="auth-card">
+        <div class="auth-header">
+            <h1>🏥SCAN IITB</h1>
+            <p>Patient Data Collection</p>
+        </div>
+
+        <form method="POST" class="auth-form">
+            <h2>Security Questions</h2>
+            <p class="text-muted" style="margin-bottom: 24px; font-size: 14px;">
+                We'll use these questions to help you reset your password if you forget it. 
+                Keep your answers simple and memorable.
+            </p>
+
+            {% if security_questions %}
+            {% for question in security_questions %}
+            <div class="form-group">
+                <label for="answer_{{ question.id }}">
+                    <span>❓</span>
+                    <span>{{ question.question }}</span>
+                </label>
+                <input
+                    type="text"
+                    id="answer_{{ question.id }}"
+                    name="answer_{{ question.id }}"
+                    required
+                    placeholder="Your answer"
+                    autocomplete="off"
+                >
+            </div>
+            {% endfor %}
+
+            <button type="submit" class="btn btn-primary btn-block">Complete Registration →</button>
+            {% else %}
+            <p class="text-muted" style="margin: 20px 0;">No security questions available. Skipping this step.</p>
+            <a href="{{ url_for('login') }}" class="btn btn-primary btn-block">Go to Login</a>
+            {% endif %}
+
+            <div class="auth-footer">
+                <p>Already have an account? <a href="{{ url_for('login') }}">Sign in here</a></p>
+            </div>
+        </form>
+    </div>
+</div>
+{% endblock %}
