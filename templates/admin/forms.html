@@ -30,6 +30,10 @@
                 <td>{{ form.created_at.strftime('%Y-%m-%d %H:%M') }}</td>
                 <td>
                     <a href="{{ url_for('edit_form', id=form.id) }}" class="btn btn-sm btn-secondary">Edit</a>
+                    <a href="{{ url_for('admin_form_responses', form_id=form.id) }}" class="btn btn-sm btn-primary">Responses</a>
+                    <form method="POST" action="{{ url_for('copy_form', id=form.id) }}" style="display:inline;" onsubmit="return confirm('Create a duplicate of this form?');">
+                        <button type="submit" class="btn btn-sm btn-primary">Copy</button>
+                    </form>
                     <form method="POST" action="{{ url_for('delete_form', id=form.id) }}" style="display:inline;" onsubmit="return confirm('Are you sure?');">
                         <button type="submit" class="btn btn-sm btn-danger">Delete</button>
                     </form>

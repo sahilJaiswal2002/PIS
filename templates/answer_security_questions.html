@@ -14,16 +14,16 @@
             <h2>Verify Your Identity</h2>
             <p class="text-muted" style="margin-bottom: 24px; font-size: 14px;">Please answer your security questions to reset your password.</p>
 
-            {% for question in security_questions %}
+            {% for sq in security_questions %}
             <div class="form-group">
-                <label for="answer_{{ question.id }}">
+                <label for="answer_{{ sq.id }}">
                     <span>🔐</span>
-                    <span>{{ question.question }}</span>
+                    <span>{{ sq.question.question }}</span>
                 </label>
                 <input
                     type="text"
-                    id="answer_{{ question.id }}"
-                    name="answer_{{ question.id }}"
+                    id="answer_{{ sq.id }}"
+                    name="answer_{{ sq.id }}"
                     required
                     placeholder="Your answer"
                     autocomplete="off"

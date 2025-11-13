@@ -1,77 +1,172 @@
 <!DOCTYPE html>
 <html lang="en">
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>{% block title %}Admin - IITB SCAN{% endblock %}</title>
-    <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}" />
     {% block extra_css %}{% endblock %}
-</head>
-<body class="admin-page-wrapper">
+    <script src="{{ url_for('static', filename='js/main.js') }}" defer></script>
+  </head>
+  <body class="admin-page-wrapper">
     <nav class="admin-sidebar">
-        <div class="sidebar-brand">
-            <h2>IITB SCAN</h2>
-            <p>Admin Panel</p>
+      <div class="sidebar-brand">
+        <div class="brand-logo">
+          <a href="{{ url_for('admin_dashboard') }}" title="Go to Dashboard">
+            <img
+              src="{{ url_for('static', filename='img/scan_logo.png') }}"
+              alt="Logo"
+            />
+          </a>
         </div>
+        <p>Admin Panel</p>
+      </div>
+
+      <ul class="sidebar-nav-menu">
+        <li>
+          <a
+            href="{{ url_for('admin_dashboard') }}"
+            class="sidebar-nav-link {% if request.endpoint == 'admin_dashboard' %}active{% endif %}"
+            ><span class="sidebar-nav-icon">📊</span><span>Dashboard</span></a
+          >
+        </li>
+        <li>
+          <a
+            href="{{ url_for('admin_patients') }}"
+            class="sidebar-nav-link {% if request.endpoint == 'admin_patients' %}active{% endif %}"
+            ><span class="sidebar-nav-icon">👥</span><span>Users</span></a
+          >
+        </li>
+        <li>
+          <a
+            href="{{ url_for('admin_diseases') }}"
+            class="sidebar-nav-link {% if request.endpoint == 'admin_diseases' %}active{% endif %}"
+            ><span class="sidebar-nav-icon">🦠</span><span>Diseases</span></a
+          >
+        </li>
+        <li>
+          <a
+            href="{{ url_for('admin_hospitals') }}"
+            class="sidebar-nav-link {% if request.endpoint == 'admin_hospitals' %}active{% endif %}"
+            ><span class="sidebar-nav-icon">🏥</span><span>Hospitals</span></a
+          >
+        </li>
+        <li>
+          <a
+            href="{{ url_for('admin_doctors') }}"
+            class="sidebar-nav-link {% if request.endpoint == 'admin_doctors' %}active{% endif %}"
+            ><span class="sidebar-nav-icon">👨‍⚕️</span><span>Doctors</span></a
+          >
+        </li>
+        <li>
+          <a
+            href="{{ url_for('admin_forms') }}"
+            class="sidebar-nav-link {% if request.endpoint == 'admin_forms' %}active{% endif %}"
+            ><span class="sidebar-nav-icon">📋</span><span>Forms</span></a
+          >
+        </li>
+        <li>
+          <a
+            href="{{ url_for('admin_submissions_pending') }}"
+            class="sidebar-nav-link {% if request.endpoint == 'admin_submissions_pending' %}active{% endif %}"
+            ><span class="sidebar-nav-icon">✅</span><span>Reviews</span></a
+          >
+        </li>
+        <li>
+          <a
+            href="{{ url_for('analytics_dashboard') }}"
+            class="sidebar-nav-link {% if request.endpoint == 'analytics_dashboard' %}active{% endif %}"
+            ><span class="sidebar-nav-icon">📈</span><span>Analytics</span></a
+          >
+        </li>
+        <li>
+          <a
+            href="{{ url_for('performance_metrics') }}"
+            class="sidebar-nav-link {% if request.endpoint == 'performance_metrics' %}active{% endif %}"
+            ><span class="sidebar-nav-icon">⚡</span><span>Performance</span></a
+          >
+        </li>
         
-        <ul class="sidebar-nav-menu">
-            <li><a href="{{ url_for('admin_dashboard') }}" class="sidebar-nav-link {% if request.endpoint == 'admin_dashboard' %}active{% endif %}"><span class="sidebar-nav-icon">📊</span><span>Dashboard</span></a></li>
-            <li><a href="{{ url_for('admin_patients') }}" class="sidebar-nav-link {% if request.endpoint == 'admin_patients' %}active{% endif %}"><span class="sidebar-nav-icon">👥</span><span>Patients</span></a></li>
-            <li><a href="{{ url_for('admin_diseases') }}" class="sidebar-nav-link {% if request.endpoint == 'admin_diseases' %}active{% endif %}"><span class="sidebar-nav-icon">🦠</span><span>Diseases</span></a></li>
-            <li><a href="{{ url_for('admin_hospitals') }}" class="sidebar-nav-link {% if request.endpoint == 'admin_hospitals' %}active{% endif %}"><span class="sidebar-nav-icon">🏥</span><span>Hospitals</span></a></li>
-            <li><a href="{{ url_for('admin_doctors') }}" class="sidebar-nav-link {% if request.endpoint == 'admin_doctors' %}active{% endif %}"><span class="sidebar-nav-icon">👨‍⚕️</span><span>Doctors</span></a></li>
-            <li><a href="{{ url_for('admin_forms') }}" class="sidebar-nav-link {% if request.endpoint == 'admin_forms' %}active{% endif %}"><span class="sidebar-nav-icon">📋</span><span>Forms</span></a></li>
-            <li><a href="{{ url_for('admin_submissions_pending') }}" class="sidebar-nav-link {% if request.endpoint == 'admin_submissions_pending' %}active{% endif %}"><span class="sidebar-nav-icon">✅</span><span>Reviews</span></a></li>
-            <li><a href="{{ url_for('analytics_dashboard') }}" class="sidebar-nav-link {% if request.endpoint == 'analytics_dashboard' %}active{% endif %}"><span class="sidebar-nav-icon">📈</span><span>Analytics</span></a></li>
-            <li><a href="{{ url_for('performance_metrics') }}" class="sidebar-nav-link {% if request.endpoint == 'performance_metrics' %}active{% endif %}"><span class="sidebar-nav-icon">⚡</span><span>Performance</span></a></li>
-            <li><a href="{{ url_for('bulk_import') }}" class="sidebar-nav-link {% if request.endpoint == 'bulk_import' %}active{% endif %}"><span class="sidebar-nav-icon">📥</span><span>Bulk Import</span></a></li>
-            <li><a href="{{ url_for('audit_logs') }}" class="sidebar-nav-link {% if request.endpoint == 'audit_logs' %}active{% endif %}"><span class="sidebar-nav-icon">🔍</span><span>Audit Logs</span></a></li>
-            <li><a href="{{ url_for('export_submissions') }}" class="sidebar-nav-link {% if request.endpoint == 'export_submissions' %}active{% endif %}"><span class="sidebar-nav-icon">📥</span><span>Export</span></a></li>
-        </ul>
-        
-        <div class="sidebar-footer">
-            {% if current_user.is_authenticated %}
-                <div class="sidebar-user-info">
-                    <div class="sidebar-user-avatar">{{ current_user.username[0].upper() }}</div>
-                    <div>
-                        <div class="sidebar-user-name">{{ current_user.username }}</div>
-                        <div class="sidebar-user-role">Administrator</div>
-                    </div>
-                </div>
-                <button data-toggle-dark-mode class="btn btn-sm btn-text w-full" title="Toggle Dark Mode" style="margin-bottom: var(--md-sys-spacing-3);">🌙 Dark Mode</button>
-                <a href="{{ url_for('logout') }}" class="btn btn-sm btn-outline w-full">Logout</a>
-            {% else %}
-                <div class="sidebar-user-info">
-                    <div class="sidebar-user-avatar">D</div>
-                    <div>
-                        <div class="sidebar-user-name">Developer</div>
-                        <div class="sidebar-user-role">Dev Mode</div>
-                    </div>
-                </div>
-                <button data-toggle-dark-mode class="btn btn-sm btn-text w-full" title="Toggle Dark Mode" style="margin-bottom: var(--md-sys-spacing-3);">🌙 Dark Mode</button>
-                <a href="{{ url_for('login') }}" class="btn btn-sm btn-outline w-full">Login</a>
-            {% endif %}
+        <li>
+          <a
+            href="{{ url_for('export_user_data') }}"
+            class="sidebar-nav-link {% if request.endpoint == 'export_user_data' %}active{% endif %}"
+            ><span class="sidebar-nav-icon">📤</span><span>Export Data</span></a
+          >
+        </li>
+        <li>
+          <a
+            href="{{ url_for('audit_logs') }}"
+            class="sidebar-nav-link {% if request.endpoint == 'audit_logs' %}active{% endif %}"
+            ><span class="sidebar-nav-icon">🔍</span><span>Audit Logs</span></a
+          >
+        </li>
+      </ul>
+
+      <div class="sidebar-footer">
+        {% if current_user.is_authenticated %}
+        <div class="sidebar-user-info">
+          <div class="sidebar-user-avatar">
+            {{ current_user.username[0].upper() }}
+          </div>
+          <div>
+            <div class="sidebar-user-name">{{ current_user.username }}</div>
+            <div class="sidebar-user-role">Administrator</div>
+          </div>
         </div>
+        <button
+          onclick="toggleDarkMode()"
+          class="btn btn-sm btn-text w-full dark-mode-toggle"
+          title="Toggle Dark Mode"
+          style="margin-bottom: var(--md-sys-spacing-3)"
+          data-toggle-dark-mode
+        >
+          🌙 Dark Mode
+        </button>
+        <a href="{{ url_for('logout') }}" class="btn btn-sm btn-outline w-full"
+          >Logout</a
+        >
+        {% else %}
+        <div class="sidebar-user-info">
+          <div class="sidebar-user-avatar">D</div>
+          <div>
+            <div class="sidebar-user-name">Developer</div>
+            <div class="sidebar-user-role">Dev Mode</div>
+          </div>
+        </div>
+        <button
+          onclick="toggleDarkMode()"
+          class="btn btn-sm btn-text w-full dark-mode-toggle"
+          title="Toggle Dark Mode"
+          style="margin-bottom: var(--md-sys-spacing-3)"
+          data-toggle-dark-mode
+        >
+          🌙 Dark Mode
+        </button>
+        <a href="{{ url_for('login') }}" class="btn btn-sm btn-outline w-full"
+          >Login</a
+        >
+        {% endif %}
+      </div>
     </nav>
-    
-    <main class="admin-main-content">
-        {% with messages = get_flashed_messages(with_categories=true) %}
-            {% if messages %}
-                <div class="flash-messages-container">
-                    {% for category, message in messages %}
-                        <div class="alert alert-{{ category }}">
-                            <span>{{ message }}</span>
-                            <button class="alert-close-btn" onclick="this.parentElement.remove()">&times;</button>
-                        </div>
-                    {% endfor %}
-                </div>
-            {% endif %}
-        {% endwith %}
-        
-        {% block content %}{% endblock %}
+
+    <main class="admin-main-content neural-bg">
+      {% with messages = get_flashed_messages(with_categories=true) %} {% if
+      messages %}
+      <div class="flash-messages-container">
+        {% for category, message in messages %}
+        <div class="alert alert-{{ category }}">
+          <span>{{ message }}</span>
+          <button class="alert-close-btn" onclick="this.parentElement.remove()">
+            &times;
+          </button>
+        </div>
+        {% endfor %}
+      </div>
+      {% endif %} {% endwith %} {% block content %}{% endblock %}
     </main>
-    
+
     <script src="{{ url_for('static', filename='js/main.js') }}"></script>
     {% block extra_js %}{% endblock %}
-</body>
+  </body>
 </html>

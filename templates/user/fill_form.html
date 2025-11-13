@@ -43,62 +43,66 @@
             {% endif %}
         </div>
         
-        <form method="POST" action="{{ url_for('submit_form') }}" class="patient-form">
+        <form method="POST" action="{{ url_for('submit_form') }}" class="patient-form gform" enctype="multipart/form-data">
             <input type="hidden" name="disease_id" value="{{ disease.id }}">
             <input type="hidden" name="hospital_id" value="{{ hospital.id }}">
             <input type="hidden" name="doctor_id" value="{{ doctor.id }}">
             <input type="hidden" name="form_id" value="{{ form.id }}">
             
             {% for field in form.fields %}
-                <div class="form-group">
-                    <label for="field_{{ field.id }}">
-                        {{ field.field_label }}
-                        {% if field.is_required %}<span class="required">*</span>{% endif %}
-                    </label>
-                    
-                    {% if field.field_type == 'text' %}
-                        <input type="text" id="field_{{ field.id }}" name="field_{{ field.id }}" {% if field.is_required %}required{% endif %}>
-                    
-                    {% elif field.field_type == 'textarea' %}
-                        <textarea id="field_{{ field.id }}" name="field_{{ field.id }}" rows="4" {% if field.is_required %}required{% endif %}></textarea>
-                    
-                    {% elif field.field_type == 'number' %}
-                        <input type="number" id="field_{{ field.id }}" name="field_{{ field.id }}" {% if field.is_required %}required{% endif %}>
-                    
-                    {% elif field.field_type == 'date' %}
-                        <input type="date" id="field_{{ field.id }}" name="field_{{ field.id }}" {% if field.is_required %}required{% endif %}>
-                    
-                    {% elif field.field_type == 'select' %}
-                        <select id="field_{{ field.id }}" name="field_{{ field.id }}" {% if field.is_required %}required{% endif %}>
-                            <option value="">Select an option</option>
-                            {% set options = field.options|fromjson %}
-                            {% for option in options %}
-                                <option value="{{ option }}">{{ option }}</option>
-                            {% endfor %}
-                        </select>
-                    
-                    {% elif field.field_type == 'radio' %}
-                        {% set options = field.options|fromjson %}
-                        <div class="radio-group">
-                            {% for option in options %}
-                                <label class="radio-label">
-                                    <input type="radio" name="field_{{ field.id }}" value="{{ option }}" {% if field.is_required %}required{% endif %}>
-                                    {{ option }}
+                <div class="gform-question">
+                    <div class="gform-label">
+                        {% if field.field_type == 'heading' %}
+                            <div class="question-title" style="font-size: 18px; font-weight: 700; margin-bottom: 8px;">{{ field.field_label }}</div>
+                        {% else %}
+                            <label for="field_{{ field.field_name }}" class="question-title">
+                                {{ field.field_label }} {% if field.is_required %}<span class="required">*</span>{% endif %}
+                            </label>
+                        {% endif %}
+                    </div>
+                    <div class="gform-control">
+                        {% if field.field_type == 'heading' %}
+                            {# No input for headings #}
+                        {% elif field.field_type == 'text' %}
+                            <input class="gform-input" type="text" id="field_{{ field.field_name }}" name="field_{{ field.field_name }}" {% if field.is_required %}required{% endif %}>
+                        {% elif field.field_type == 'textarea' %}
+                            <textarea class="gform-textarea" id="field_{{ field.field_name }}" name="field_{{ field.field_name }}" rows="4" {% if field.is_required %}required{% endif %}></textarea>
+                        {% elif field.field_type == 'number' %}
+                            <input class="gform-input" type="number" id="field_{{ field.field_name }}" name="field_{{ field.field_name }}" {% if field.is_required %}required{% endif %}>
+                        {% elif field.field_type == 'date' %}
+                            <input class="gform-input" type="date" id="field_{{ field.field_name }}" name="field_{{ field.field_name }}" {% if field.is_required %}required{% endif %}>
+                        {% elif field.field_type == 'select' %}
+                            <select class="gform-select" id="field_{{ field.field_name }}" name="field_{{ field.field_name }}" {% if field.is_required %}required{% endif %}>
+                                <option value="">Select an option</option>
+                                {% set options = options_map.get(field.id, []) %}
+                                {% for option in options %}
+                                    <option value="{{ option }}">{{ option }}</option>
+                                {% endfor %}
+                            </select>
+                        {% elif field.field_type == 'radio' %}
+                            {% set options = options_map.get(field.id, []) %}
+                            <div class="gform-options">
+                                {% for option in options %}
+                                <label class="gform-option gform-radio">
+                                    <input type="radio" name="field_{{ field.field_name }}" value="{{ option }}" {% if field.is_required %}required{% endif %}>
+                                    <span>{{ option }}</span>
                                 </label>
-                            {% endfor %}
-                        </div>
-                    
-                    {% elif field.field_type == 'checkbox' %}
-                        {% set options = field.options|fromjson %}
-                        <div class="checkbox-group">
-                            {% for option in options %}
-                                <label class="checkbox-label">
-                                    <input type="checkbox" name="field_{{ field.id }}" value="{{ option }}">
-                                    {{ option }}
+                                {% endfor %}
+                            </div>
+                        {% elif field.field_type == 'checkbox' %}
+                            {% set options = options_map.get(field.id, []) %}
+                            <div class="gform-options">
+                                {% for option in options %}
+                                <label class="gform-option gform-checkbox">
+                                    <input type="checkbox" name="field_{{ field.field_name }}" value="{{ option }}">
+                                    <span>{{ option }}</span>
                                 </label>
-                            {% endfor %}
-                        </div>
-                    {% endif %}
+                                {% endfor %}
+                            </div>
+                        {% elif field.field_type == 'file' %}
+                            <input class="gform-upload" type="file" id="field_{{ field.field_name }}" name="field_{{ field.field_name }}" {% if field.is_required %}required{% endif %}>
+                        {% endif %}
+                    </div>
                 </div>
             {% endfor %}
             

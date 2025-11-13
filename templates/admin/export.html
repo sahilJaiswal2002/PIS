@@ -14,39 +14,60 @@
     <div class="card-header">Export Settings</div>
     <form method="post" class="form-wrapper">
         <div class="form-group">
+            <label class="form-label">Select Hospital</label>
+            <select name="hospital_id" class="form-select" required>
+                <option value="">-- Select Hospital --</option>
+                {% for hospital in hospitals %}
+                <option value="{{ hospital.id }}" {% if hospital.id == selected_hospital_id %}selected{% endif %}>{{ hospital.name }}</option>
+                {% endfor %}
+            </select>
+        </div>
+        <div class="form-group">
+            <label class="form-label">Select Disease</label>
+            <select name="disease_id" class="form-select" {% if not diseases %}disabled{% endif %} required>
+                <option value="">-- Select Disease --</option>
+                {% for disease in diseases %}
+                <option value="{{ disease.id }}" {% if disease.id == selected_disease_id %}selected{% endif %}>{{ disease.name }}</option>
+                {% endfor %}
+            </select>
+        </div>
+        <div class="form-group">
+            <label class="form-label">Select Doctor</label>
+            <select name="doctor_id" class="form-select" {% if not doctors %}disabled{% endif %} required>
+                <option value="">-- Select Doctor --</option>
+                {% for doctor in doctors %}
+                <option value="{{ doctor.id }}" {% if doctor.id == selected_doctor_id %}selected{% endif %}>{{ doctor.name }}</option>
+                {% endfor %}
+            </select>
+        </div>
+        <div class="form-group">
+            <label class="form-label">Select Form</label>
+            <select name="form_id" class="form-select" {% if not forms %}disabled{% endif %} required>
+                <option value="">-- Select Form --</option>
+                {% for form in forms %}
+                <option value="{{ form.id }}" {% if form.id == selected_form_id %}selected{% endif %}>{{ form.name }}</option>
+                {% endfor %}
+            </select>
+        </div>
+        <div class="form-group-row">
+            <div class="form-group">
+                <label class="form-label">From Date</label>
+                <input type="date" name="date_from" class="form-input" value="{{ date_from }}">
+                <p class="form-helper-text">Optional: Leave blank for all dates</p>
+            </div>
+            <div class="form-group">
+                <label class="form-label">To Date</label>
+                <input type="date" name="date_to" class="form-input" value="{{ date_to }}">
+                <p class="form-helper-text">Optional: Leave blank for all dates</p>
+            </div>
+        </div>
+        <div class="form-group">
             <label class="form-label form-label-required">Format</label>
             <select name="format" class="form-select" required>
                 <option value="csv">CSV (Microsoft Excel Compatible)</option>
                 <option value="excel">Excel (.xlsx) Workbook</option>
             </select>
         </div>
-
-        <div class="form-group-row">
-            <div class="form-group">
-                <label class="form-label">From Date</label>
-                <input type="date" name="date_from" class="form-input">
-                <p class="form-helper-text">Optional: Leave blank for all dates</p>
-            </div>
-            <div class="form-group">
-                <label class="form-label">To Date</label>
-                <input type="date" name="date_to" class="form-input">
-                <p class="form-helper-text">Optional: Leave blank for all dates</p>
-            </div>
-        </div>
-
-        <div class="form-group">
-            <label class="form-label">Filter by Status</label>
-            <select name="status" class="form-select">
-                <option value="">-- All Statuses --</option>
-                <option value="submitted">Pending Review</option>
-                <option value="approved">Approved</option>
-                <option value="rejected">Rejected</option>
-                <option value="needs_revision">Needs Revision</option>
-                <option value="reviewed">Reviewed</option>
-            </select>
-            <p class="form-helper-text">Optional: Select a status to filter submissions</p>
-        </div>
-
         <div class="form-group">
             <label class="checkbox-wrapper">
                 <input type="checkbox" name="include_details" class="checkbox-input">
@@ -54,7 +75,6 @@
             </label>
             <p class="form-helper-text">When checked, all individual form field responses will be included in the export (slower for large datasets)</p>
         </div>
-
         <div class="form-actions">
             <button type="submit" class="btn btn-primary btn-lg">
                 📥 Export Submissions

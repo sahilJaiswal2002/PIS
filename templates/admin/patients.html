@@ -1,17 +1,17 @@
 {% extends "admin/base.html" %}
 
-{% block title %}Patients - Admin{% endblock %}
+{% block title %}Users - Admin{% endblock %}
 
 {% block content %}
 <div class="page-header-wrapper">
     <div>
-        <h1 class="headline-medium">Patient Search</h1>
-        <p class="text-muted">Find and manage patient information</p>
+        <h1 class="headline-medium">User Search</h1>
+        <p class="text-muted">Find and manage user information</p>
     </div>
 </div>
 
 <div class="card mb-8">
-    <div class="card-header">Search Patients</div>
+    <div class="card-header">Search Users</div>
     <form method="get" class="form-wrapper">
         <div class="form-group-row">
             <div class="form-group">
@@ -24,7 +24,7 @@
                     <option value="all" {% if search_type == 'all' %}selected{% endif %}>All Fields</option>
                     <option value="username" {% if search_type == 'username' %}selected{% endif %}>Username</option>
                     <option value="email" {% if search_type == 'email' %}selected{% endif %}>Email</option>
-                    <option value="id" {% if search_type == 'id' %}selected{% endif %}>Patient ID</option>
+                    <option value="id" {% if search_type == 'id' %}selected{% endif %}>User ID</option>
                 </select>
             </div>
         </div>
@@ -67,6 +67,9 @@
                         <td>
                             <div class="table-actions">
                                 <a href="{{ url_for('admin_patient_detail', patient_id=patient.id) }}" class="table-action-btn" title="View Details">👁️</a>
+                                <form method="post" action="{{ url_for('make_admin', user_id=patient.id) }}" style="display:inline" title="Make Admin" onsubmit="return confirm('Promote this user to admin?');">
+                                    <button class="table-action-btn" type="submit">⬆️</button>
+                                </form>
                             </div>
                         </td>
                     </tr>
@@ -77,8 +80,8 @@
 {% else %}
     <div class="empty-state-wrapper">
         <div class="empty-state-icon">🔍</div>
-        <h3 class="empty-state-title">No Patients Found</h3>
-        <p class="empty-state-description">No patients match your search criteria. Try a different search term.</p>
+        <h3 class="empty-state-title">No Users Found</h3>
+        <p class="empty-state-description">No users match your search criteria. Try a different search term.</p>
     </div>
 {% endif %}
 {% endblock %}

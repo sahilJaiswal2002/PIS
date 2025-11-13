@@ -45,7 +45,7 @@ def admin_patients():
     search_query = request.args.get('search', '')
     search_type = request.args.get('type', 'all')  # all, username, email, id
     
-    query = User.query.filter_by(is_admin=False)
+    query = User.query
     
     if search_query:
         if search_type == 'username':
@@ -75,7 +75,7 @@ def admin_patients():
 @admin_required
 def admin_patient_detail(patient_id):
     """View detailed patient information and submission history"""
-    patient = User.query.filter_by(id=patient_id, is_admin=False).first_or_404()
+    patient = User.query.get_or_404(patient_id)
     submissions = Submission.query.filter_by(user_id=patient_id).order_by(Submission.created_at.desc()).all()
     drafts = DraftSubmission.query.filter_by(user_id=patient_id).order_by(DraftSubmission.updated_at.desc()).all()
     
@@ -84,70 +84,44 @@ def admin_patient_detail(patient_id):
                          submissions=submissions,
                          drafts=drafts)
 
+@app.route('/admin/users/<int:user_id>/make-admin', methods=['POST'])
+@login_required
+@admin_required
+def make_admin(user_id):
+    user = User.query.get_or_404(user_id)
+    if user.is_admin:
+        flash('User is already an admin', 'info')
+        return redirect(request.referrer or url_for('admin_patients'))
+    user.is_admin = True
+    user.requested_admin = False
+    db.session.commit()
+    log_audit('Promote to Admin', 'User', user.id, user.username)
+    flash(f"{user.username} is now an admin", 'success')
+    return redirect(request.referrer or url_for('admin_patients'))
+
+@app.route('/admin/users/<int:user_id>/revoke-admin', methods=['POST'])
+@login_required
+@admin_required
+def revoke_admin(user_id):
+    user = User.query.get_or_404(user_id)
+    if not user.is_admin:
+        flash('User is not an admin', 'info')
+        return redirect(request.referrer or url_for('admin_patients'))
+    user.is_admin = False
+    db.session.commit()
+    log_audit('Revoke Admin', 'User', user.id, user.username)
+    flash(f"{user.username} admin access revoked", 'success')
+    return redirect(request.referrer or url_for('admin_patients'))
+
 # ===== Bulk Import Routes =====
 
 @app.route('/admin/bulk-import', methods=['GET', 'POST'])
 @login_required
 @admin_required
 def bulk_import():
-    """Handle bulk CSV import for diseases, hospitals, doctors"""
-    if request.method == 'POST':
-        import_type = request.form.get('import_type')
-        file = request.files.get('file')
-        
-        if not file or file.filename == '':
-            flash('No file selected', 'error')
-            return redirect(request.url)
-        
-        try:
-            stream = io.TextIOWrapper(file.stream, encoding='utf-8')
-            csv_reader = csv.DictReader(stream)
-            imported_count = 0
-            
-            if import_type == 'diseases':
-                for row in csv_reader:
-                    disease = Disease(
-                        name=row.get('name', ''),
-                        description=row.get('description', '')
-                    )
-                    db.session.add(disease)
-                    imported_count += 1
-                log_audit('Bulk Import', 'Disease', None, f'{imported_count} diseases', {'count': imported_count})
-                
-            elif import_type == 'hospitals':
-                for row in csv_reader:
-                    hospital = Hospital(
-                        name=row.get('name', ''),
-                        address=row.get('address', ''),
-                        phone=row.get('phone', '')
-                    )
-                    db.session.add(hospital)
-                    imported_count += 1
-                log_audit('Bulk Import', 'Hospital', None, f'{imported_count} hospitals', {'count': imported_count})
-                
-            elif import_type == 'doctors':
-                for row in csv_reader:
-                    hospital = Hospital.query.filter_by(name=row.get('hospital')).first()
-                    if hospital:
-                        doctor = Doctor(
-                            name=row.get('name', ''),
-                            specialization=row.get('specialization', ''),
-                            hospital_id=hospital.id
-                        )
-                        db.session.add(doctor)
-                        imported_count += 1
-                log_audit('Bulk Import', 'Doctor', None, f'{imported_count} doctors', {'count': imported_count})
-            
-            db.session.commit()
-            flash(f'Successfully imported {imported_count} records', 'success')
-            
-        except Exception as e:
-            db.session.rollback()
-            flash(f'Import failed: {str(e)}', 'error')
-        
-        return redirect(url_for('bulk_import'))
-    
-    return render_template('admin/bulk_import.html')
+    # Feature removed
+    from flask import abort
+    abort(404)
 
 # ===== Submission Review Routes =====
 

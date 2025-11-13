@@ -10,22 +10,25 @@
 
 <div class="form-builder-container">
     <form id="formBuilderForm" method="POST">
+        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
         <div class="form-section">
             <h2>Form Details</h2>
             <div class="form-group">
                 <label for="name">Form Name</label>
-                <input type="text" id="name" name="name" value="{% if form %}{{ form.name }}{% endif %}" required>
+                <input type="text" id="name" name="name" class="form-control" value="{{ form.name }}" required>
             </div>
             <div class="form-group">
                 <label for="description">Description</label>
-                <textarea id="description" name="description" rows="2">{% if form %}{{ form.description }}{% endif %}</textarea>
+                <textarea id="description" name="description" class="form-control" rows="2">{{ form.description }}</textarea>
             </div>
             <div class="form-group">
                 <label for="disease_id">Associated Disease</label>
-                <select id="disease_id" name="disease_id" required>
+                <select id="disease_id" name="disease_id" class="form-control" required>
                     <option value="">Select Disease</option>
                     {% for disease in diseases %}
-                    <option value="{{ disease.id }}" {% if form and form.disease_id == disease.id %}selected{% endif %}>{{ disease.name }}</option>
+                    <option value="{{ disease.id }}" {% if form.disease_id == disease.id %}selected{% endif %}>
+                        {{ disease.name }}
+                    </option>
                     {% endfor %}
                 </select>
             </div>
@@ -51,23 +54,39 @@
     </form>
 </div>
 
+<script id="initialFields" type="application/json">{{ fields|safe if fields else '[]' }}</script>
+
 <script>
 let fieldCounter = 0;
-let fields = {% if form %}{{ form.fields|tojson }}{% else %}[]{% endif %};
+let fields = [];
 
-// Load existing fields if editing
-if (fields.length > 0) {
-    fields.forEach((field, idx) => {
-        addField({
-            name: field.field_name,
-            type: field.field_type,
-            label: field.field_label,
-            required: field.is_required,
-            options: field.options ? JSON.parse(field.options) : []
-        });
-    });
-} else if (fieldCounter === 0) {
-    // Add one empty field for new forms
+// Initialize fields from template or create a new one
+try {
+    const initialFieldsElement = document.getElementById('initialFields');
+    if (initialFieldsElement && initialFieldsElement.textContent) {
+        const initialFields = JSON.parse(initialFieldsElement.textContent);
+        if (Array.isArray(initialFields) && initialFields.length > 0) {
+            // Sort fields by their original order
+            initialFields.sort((a, b) => (a.order || 0) - (b.order || 0));
+            
+            // Add each field to the form
+            initialFields.forEach((field) => {
+                addField({
+                    name: field.name || field.field_name || '',
+                    type: field.type || field.field_type || 'text',
+                    label: field.label || field.field_label || '',
+                    required: field.required || field.is_required || false,
+                    options: Array.isArray(field.options) ? field.options : []
+                });
+            });
+        } else {
+            addField();
+        }
+    } else {
+        addField();
+    }
+} catch (error) {
+    console.error('Error initializing form fields:', error);
     addField();
 }
 
@@ -82,7 +101,12 @@ function addField(data = null) {
     fieldDiv.innerHTML = `
         <div class="field-builder-header">
             <h3>Field ${fieldId + 1}</h3>
-            <button type="button" class="btn btn-sm btn-danger" onclick="removeField(${fieldId})">Remove</button>
+            <div class="field-actions">
+                <button type="button" class="btn btn-sm btn-outline" onclick="moveFieldUp(${fieldId})">↑</button>
+                <button type="button" class="btn btn-sm btn-outline" onclick="moveFieldDown(${fieldId})">↓</button>
+                <button type="button" class="btn btn-sm btn-secondary" onclick="duplicateField(${fieldId})">Duplicate</button>
+                <button type="button" class="btn btn-sm btn-danger" onclick="removeField(${fieldId})">Remove</button>
+            </div>
         </div>
         <div class="field-builder-body">
             <div class="form-row">
@@ -100,14 +124,16 @@ function addField(data = null) {
                         <option value="select" ${data && data.type === 'select' ? 'selected' : ''}>Dropdown</option>
                         <option value="radio" ${data && data.type === 'radio' ? 'selected' : ''}>Radio</option>
                         <option value="checkbox" ${data && data.type === 'checkbox' ? 'selected' : ''}>Checkbox</option>
+                        <option value="file" ${data && data.type === 'file' ? 'selected' : ''}>File Upload</option>
+                        <option value="heading" ${data && data.type === 'heading' ? 'selected' : ''}>Heading</option>
                     </select>
                 </div>
             </div>
             <div class="form-row">
                 <div class="form-group">
-                    <label>Field Name (internal)</label>
-                    <input type="text" class="field-name" value="${data ? data.name : ''}" required>
-                    <small class="text-muted">Used for storing data (e.g., patient_name, age, symptoms)</small>
+                    <label>Field Name</label>
+                    <input type="text" class="field-name" value="${data ? data.name : ''}">
+                    <small class="text-muted">Auto-generated from label; you may customize</small>
                 </div>
                 <div class="form-group">
                     <label class="checkbox-label">
@@ -125,36 +151,175 @@ function addField(data = null) {
     `;
     
     container.appendChild(fieldDiv);
+
+    // Auto-slugify field name from label if empty or auto-managed
+    const labelInput = fieldDiv.querySelector('.field-label');
+    const nameInput = fieldDiv.querySelector('.field-name');
+    const typeSelect = fieldDiv.querySelector('.field-type');
+    const optionsText = fieldDiv.querySelector('.field-options-text');
+
+    // Keep track if name was auto-set so we don't overwrite manual edits
+    if (!nameInput.dataset.userEdited) {
+        nameInput.dataset.userEdited = (data && data.name) ? 'true' : 'false';
+    }
+
+    labelInput.addEventListener('input', () => {
+        if (nameInput.dataset.userEdited !== 'true') {
+            nameInput.value = slugify(labelInput.value);
+        }
+    });
+
+    nameInput.addEventListener('input', () => {
+        // Mark as user edited if they type something custom
+        nameInput.dataset.userEdited = 'true';
+        nameInput.value = slugify(nameInput.value);
+    });
+    updateFieldHeaders();
+    return fieldDiv;
+}
+
+function slugify(text) {
+    return (text || '')
+        .toString()
+        .trim()
+        .toLowerCase()
+        .replace(/[^a-z0-9]+/g, '_')
+        .replace(/^_+|_+$/g, '')
+        .replace(/__+/g, '_')
+        .substring(0, 64); // limit length
 }
 
 function removeField(fieldId) {
     const field = document.getElementById('field-' + fieldId);
     if (field) field.remove();
+    updateFieldHeaders();
 }
 
 function toggleOptions(fieldId) {
     const field = document.getElementById('field-' + fieldId);
     const typeSelect = field.querySelector('.field-type');
     const optionsDiv = field.querySelector('.field-options');
+    const requiredBox = field.querySelector('.field-required');
+    const nameInput = field.querySelector('.field-name');
     
     if (['select', 'radio', 'checkbox'].includes(typeSelect.value)) {
         optionsDiv.style.display = 'block';
     } else {
         optionsDiv.style.display = 'none';
     }
+
+    // For headings, disable required toggle; name still needed internally
+    if (typeSelect.value === 'heading') {
+        if (requiredBox) {
+            requiredBox.checked = false;
+            requiredBox.disabled = true;
+        }
+    } else if (requiredBox) {
+        requiredBox.disabled = false;
+    }
 }
 
+function duplicateField(fieldId) {
+    const src = document.getElementById('field-' + fieldId);
+    if (!src) return;
+    const data = {
+        label: src.querySelector('.field-label')?.value || '',
+        type: src.querySelector('.field-type')?.value || 'text',
+        name: src.querySelector('.field-name')?.value || '',
+        required: !!src.querySelector('.field-required')?.checked,
+        options: (src.querySelector('.field-options-text')?.value || '')
+            .split('\n').map(o => o.trim()).filter(Boolean)
+    };
+    const newDiv = addField(data);
+    const container = document.getElementById('fieldsContainer');
+    if (newDiv && src && container) {
+        container.insertBefore(newDiv, src.nextSibling);
+        updateFieldHeaders();
+    }
+}
+
+function moveFieldUp(fieldId) {
+    const el = document.getElementById('field-' + fieldId);
+    if (!el) return;
+    const prev = el.previousElementSibling;
+    if (prev) {
+        el.parentNode.insertBefore(el, prev);
+        updateFieldHeaders();
+    }
+}
+
+function moveFieldDown(fieldId) {
+    const el = document.getElementById('field-' + fieldId);
+    if (!el) return;
+    const next = el.nextElementSibling ? el.nextElementSibling.nextElementSibling : null;
+    el.parentNode.insertBefore(el, next);
+    updateFieldHeaders();
+}
+
+function updateFieldHeaders() {
+    const items = document.querySelectorAll('.field-builder');
+    items.forEach((div, idx) => {
+        const h = div.querySelector('.field-builder-header h3');
+        if (h) h.textContent = 'Field ' + (idx + 1);
+    });
+}
+
+// Handle form submission
 document.getElementById('formBuilderForm').addEventListener('submit', function(e) {
     e.preventDefault();
     
     const fieldsData = [];
+    const fieldElements = document.querySelectorAll('.field-builder');
+    
+    // Collect all field data
+    fieldElements.forEach((fieldEl, index) => {
+        const fieldData = {
+            name: fieldEl.querySelector('.field-name').value.trim(),
+            type: fieldEl.querySelector('.field-type').value,
+            label: fieldEl.querySelector('.field-label').value.trim(),
+            required: fieldEl.querySelector('.field-required').checked,
+            order: index
+        };
+        
+        // Add options for select/radio/checkbox fields
+        const optionsText = fieldEl.querySelector('.field-options-text');
+        if (optionsText && ['select', 'radio', 'checkbox'].includes(fieldData.type)) {
+            fieldData.options = optionsText.value
+                .split('\n')
+                .map(opt => opt.trim())
+                .filter(opt => opt !== '');
+        } else {
+            fieldData.options = [];
+        }
+        
+        fieldsData.push(fieldData);
+    });
+    
+    // Set the hidden fields input with the JSON data
+    document.getElementById('fields').value = JSON.stringify(fieldsData);
+    
+    // Submit the form
+    this.submit();
+    const seenNames = new Set();
+    let error = null;
     document.querySelectorAll('.field-builder').forEach(fieldDiv => {
         const label = fieldDiv.querySelector('.field-label').value;
         const type = fieldDiv.querySelector('.field-type').value;
-        const name = fieldDiv.querySelector('.field-name').value;
+        let name = fieldDiv.querySelector('.field-name').value;
+        name = slugify(name || label);
         const required = fieldDiv.querySelector('.field-required').checked;
         const optionsText = fieldDiv.querySelector('.field-options-text').value;
         
+        if (!label || !name) {
+            error = 'Each field must have a label and a valid name.';
+            return;
+        }
+        if (seenNames.has(name)) {
+            error = 'Field names must be unique. Duplicate: ' + name;
+            return;
+        }
+        seenNames.add(name);
+
         const fieldData = {
             label: label,
             type: type,
@@ -162,12 +327,25 @@ document.getElementById('formBuilderForm').addEventListener('submit', function(e
             required: required
         };
         
-        if (['select', 'radio', 'checkbox'].includes(type) && optionsText) {
-            fieldData.options = optionsText.split('\n').filter(o => o.trim());
+        if (['select', 'radio', 'checkbox'].includes(type)) {
+            const opts = (optionsText || '').split('\n').map(o => o.trim()).filter(Boolean);
+            if (opts.length === 0) {
+                error = 'Options are required for dropdown, radio, and checkbox fields.';
+                return;
+            }
+            fieldData.options = opts;
         }
         
         fieldsData.push(fieldData);
     });
+    if (error) {
+        alert(error);
+        return;
+    }
+    if (fieldsData.length === 0) {
+        alert('Please add at least one field.');
+        return;
+    }
     
     document.getElementById('fields').value = JSON.stringify(fieldsData);
     this.submit();

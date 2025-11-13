@@ -65,8 +65,9 @@
                     {% if related_disease.doctors|length > 0 %}
                         <p class="mb-2">
                             <strong>Hospitals:</strong><br>
-                            {% set hospital_names = related_disease.doctors|map(attribute='hospital')|map(attribute='name')|unique %}
-                            {{ hospital_names|list|join(', ')[:80] }}{% if hospital_names|list|join(', ')|length > 80 %}...{% endif %}
+                            {% set hospital_names = related_disease.doctors|map(attribute='hospital')|map(attribute='name')|unique|list %}
+                            {% set hospital_names_str = hospital_names|join(', ') %}
+                            {{ hospital_names_str[:80] }}{% if hospital_names_str|length > 80 %}...{% endif %}
                         </p>
                     {% endif %}
                     <p class="label-small text-muted">

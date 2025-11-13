@@ -1,7 +1,10 @@
-from flask import render_template, request, redirect, url_for, flash, jsonify, send_file
+from flask import render_template, request, redirect, url_for, flash, jsonify, send_file, make_response
 from flask_login import login_user, logout_user, login_required, current_user
 from werkzeug.security import generate_password_hash, check_password_hash
 from functools import wraps
+import os
+import uuid
+from werkzeug.utils import secure_filename
 import json
 import io
 import secrets
@@ -11,6 +14,8 @@ from models import (
     User, Disease, Hospital, Doctor, Form, FormField, Submission, DraftSubmission,
     SecurityQuestion, UserSecurityQuestion, PasswordResetToken
 )
+from forms import LoginForm
+from export_utils import generate_submission_pdf, generate_submissions_csv, generate_submissions_excel, generate_detailed_submissions_excel, generate_detailed_submissions_csv
 
 @login_manager.user_loader
 def load_user(user_id):
@@ -19,9 +24,18 @@ def load_user(user_id):
 def admin_required(f):
     @wraps(f)
     def decorated_function(*args, **kwargs):
-        if not current_user.is_authenticated or not current_user.is_admin:
+        if not current_user.is_authenticated:
+            app.logger.warning('User not authenticated, redirecting to login')
+            flash('Please log in to access this page.', 'error')
+            return redirect(url_for('login'))
+            
+        if not current_user.is_admin:
+            app.logger.warning(f'User {current_user.username} (ID: {current_user.id}) is not an admin')
+            app.logger.warning(f'User admin status: {current_user.is_admin}')
             flash('You need admin privileges to access this page.', 'error')
             return redirect(url_for('index'))
+            
+        app.logger.info(f'Admin access granted to {current_user.username} (ID: {current_user.id})')
         return f(*args, **kwargs)
     return decorated_function
 
@@ -49,18 +63,17 @@ def login():
     if current_user.is_authenticated:
         return redirect(url_for('index'))
     
-    if request.method == 'POST':
-        username = request.form.get('username')
-        password = request.form.get('password')
-        user = User.query.filter_by(username=username).first()
+    form = LoginForm()
+    if form.validate_on_submit():
+        user = User.query.filter_by(username=form.username.data).first()
         
-        if user and check_password_hash(user.password, password):
-            login_user(user)
+        if user and check_password_hash(user.password, form.password.data):
+            login_user(user, remember=form.remember.data)
             return redirect(url_for('index'))
         else:
             flash('Invalid username or password', 'error')
     
-    return render_template('login.html')
+    return render_template('login.html', form=form)
 
 @app.route('/register', methods=['GET', 'POST'])
 def register():
@@ -553,19 +566,118 @@ def edit_form(id):
         flash('Form updated successfully', 'success')
         return redirect(url_for('admin_forms'))
     
+    # For GET request, render the form builder with existing form data
     diseases = Disease.query.all()
-    return render_template('admin/form_builder.html', form=form, diseases=diseases)
+    
+    # Convert form fields to a serializable format and sort by order
+    serialized_fields = []
+    for field in sorted(form.fields, key=lambda x: x.order):
+        try:
+            options = json.loads(field.options) if field.options else []
+        except json.JSONDecodeError:
+            options = []
+            
+        field_data = {
+            'name': field.field_name,
+            'type': field.field_type,
+            'label': field.field_label,
+            'required': field.is_required,
+            'options': options,
+            'order': field.order
+        }
+        serialized_fields.append(field_data)
+    
+    # Create a minimal serializable form dictionary
+    form_data = {
+        'id': form.id,
+        'name': form.name,
+        'description': form.description or '',
+        'disease_id': form.disease_id
+    }
+    
+    # Convert fields to JSON string for the template
+    fields_json = json.dumps(serialized_fields) if serialized_fields else '[]'
+    
+    # Pass the form and fields data to the template
+    return render_template('admin/form_builder.html', 
+                         form=form_data, 
+                         diseases=diseases, 
+                         fields=fields_json,
+                         is_edit=True)
 
 @app.route('/admin/forms/<int:id>/delete', methods=['POST'])
 @login_required
 @admin_required
 def delete_form(id):
     form = Form.query.get_or_404(id)
-    db.session.delete(form)
-    db.session.commit()
-    
-    flash('Form deleted successfully', 'success')
+    if request.method == 'POST':
+        db.session.delete(form)
+        db.session.commit()
+        flash('Form deleted successfully!', 'success')
+        return redirect(url_for('admin_forms'))
     return redirect(url_for('admin_forms'))
+
+@app.route('/admin/forms/<int:id>/copy', methods=['POST'])
+@login_required
+@admin_required
+def copy_form(id):
+    try:
+        # Get the original form
+        original_form = Form.query.get_or_404(id)
+        
+        # Create a new form with similar details
+        new_form = Form(
+            name=f"{original_form.name} (Copy)",
+            description=original_form.description,
+            disease_id=original_form.disease_id,
+            version=1,
+            is_active=original_form.is_active
+        )
+        
+        # Add the new form to the session
+        db.session.add(new_form)
+        db.session.flush()  # This will assign an ID to new_form without committing
+        
+        # Copy all the form fields
+        for field in original_form.fields:
+            new_field = FormField(
+                form_id=new_form.id,
+                field_name=field.field_name,
+                field_type=field.field_type,
+                field_label=field.field_label,
+                is_required=field.is_required,
+                options=field.options,
+                order=field.order
+            )
+            db.session.add(new_field)
+        
+        # Create a version snapshot
+        version = FormVersion(
+            form_id=new_form.id,
+            version_number=1,
+            fields_snapshot=json.dumps([{
+                'field_name': f.field_name,
+                'field_type': f.field_type,
+                'field_label': f.field_label,
+                'is_required': f.is_required,
+                'options': f.options,
+                'order': f.order
+            } for f in new_form.fields]),
+            created_by_id=current_user.id
+        )
+        db.session.add(version)
+        
+        # Commit all changes
+        db.session.commit()
+        
+        flash('Form copied successfully!', 'success')
+        return redirect(url_for('edit_form', id=new_form.id))
+        
+    except Exception as e:
+        db.session.rollback()
+        flash('Error copying form. Please try again.', 'error')
+        app.logger.error(f'Error copying form: {str(e)}')
+        return redirect(url_for('admin_forms'))
 
 @app.route('/admin/submissions')
 @login_required
@@ -579,14 +691,30 @@ def admin_submissions():
 @admin_required
 def view_submission(id):
     submission = Submission.query.get_or_404(id)
-    return render_template('admin/submission_detail.html', submission=submission)
+    try:
+        submission_data = json.loads(submission.data)
+    except Exception:
+        submission_data = {}
+    return render_template('admin/submission_detail.html', submission=submission, submission_data=submission_data)
 
 # User Routes
 @app.route('/user')
 @login_required
 def user_dashboard():
     submissions = Submission.query.filter_by(user_id=current_user.id).order_by(Submission.created_at.desc()).all()
-    return render_template('user/dashboard.html', submissions=submissions)
+    # Build lightweight previews: first 3 form fields in form-defined order
+    submission_previews = {}
+    for s in submissions:
+        try:
+            data = json.loads(s.data)
+        except Exception:
+            data = {}
+        rows = []
+        for f in s.form.fields[:3]:
+            key = f"field_{f.field_name}"
+            rows.append((f.field_label, data.get(key, '')))
+        submission_previews[s.id] = rows
+    return render_template('user/dashboard.html', submissions=submissions, submission_previews=submission_previews)
 
 @app.route('/user/forms/search')
 @login_required
@@ -663,7 +791,17 @@ def fill_form(disease_id, hospital_id, doctor_id):
         flash('No form available for this disease', 'error')
         return redirect(url_for('select_disease'))
     
-    return render_template('user/fill_form.html', disease=disease, hospital=hospital, doctor=doctor, form=form)
+    # Build options map for choice fields to avoid using fromjson in templates
+    options_map = {}
+    for f in form.fields:
+        if f.options:
+            try:
+                options_map[f.id] = json.loads(f.options)
+            except Exception:
+                options_map[f.id] = []
+        else:
+            options_map[f.id] = []
+    return render_template('user/fill_form.html', disease=disease, hospital=hospital, doctor=doctor, form=form, options_map=options_map)
 
 @app.route('/user/submit/submit-form', methods=['POST'])
 @login_required
@@ -675,9 +813,70 @@ def submit_form():
     
     # Collect form data
     form_data = {}
+    # First get all field values
     for key, value in request.form.items():
         if key.startswith('field_'):
             form_data[key] = value
+    
+    # Handle checkboxes (they only post when checked)
+    for key in request.form.keys():
+        if key.startswith('field_') and key not in form_data:
+            form_data[key] = ''  # Default value for unchecked checkboxes
+    
+    # Handle multi-select checkboxes (they have the same name)
+    for key in request.form.keys():
+        if key.startswith('field_') and key.endswith('[]'):
+            base_key = key[:-2]  # Remove '[]' from the end
+            values = request.form.getlist(key)
+            form_data[base_key] = ','.join(values)
+
+    # Determine patient name from submitted fields and form schema for folder naming
+    def _slugify(text):
+        s = (text or '').strip().lower()
+        out = []
+        for ch in s:
+            if ch.isalnum():
+                out.append(ch)
+            elif ch in [' ', '-', '.', '_']:
+                out.append('_')
+        slug = ''.join(out).strip('_')
+        while '__' in slug:
+            slug = slug.replace('__', '_')
+        return slug[:64] if slug else ''
+
+    patient_name_value = None
+    try:
+        form_obj = Form.query.get(form_id)
+    except Exception:
+        form_obj = None
+    if form_obj:
+        for f in form_obj.fields:
+            if f.field_type == 'file':
+                continue
+            fname = (f.field_name or '').lower()
+            flabel = (f.field_label or '').lower()
+            if fname in ['patient_name', 'name', 'full_name'] or 'name' in fname or 'name' in flabel:
+                v = request.form.get(f'field_{f.field_name}')
+                if v:
+                    patient_name_value = v
+                    break
+    patient_slug = _slugify(patient_name_value) or f'user_{current_user.id}'
+
+    # Handle uploaded files
+    base_upload_folder = app.config.get('UPLOAD_FOLDER', 'static/uploads')
+    target_folder = os.path.join(base_upload_folder, patient_slug)
+    os.makedirs(target_folder, exist_ok=True)
+    for key in request.files:
+        if key.startswith('field_'):
+            file = request.files.get(key)
+            if file and file.filename:
+                filename = secure_filename(file.filename)
+                unique_name = f"{patient_slug}_{uuid.uuid4().hex}_{filename}"
+                save_path = os.path.join(target_folder, unique_name)
+                file.save(save_path)
+                # Store as web path
+                web_path = '/' + save_path.replace('\\', '/').lstrip('/')
+                form_data[key] = web_path
     
     submission = Submission(
         user_id=current_user.id,
@@ -698,24 +897,217 @@ def submit_form():
 @login_required
 def user_view_submission(id):
     submission = Submission.query.filter_by(id=id, user_id=current_user.id).first_or_404()
-    return render_template('user/submission_detail.html', submission=submission)
+    try:
+        submission_data = json.loads(submission.data)
+    except Exception:
+        submission_data = {}
+    return render_template('user/submission_detail.html', submission=submission, submission_data=submission_data)
 
-# Export Routes
-@app.route('/user/submissions/<int:id>/download-pdf')
+# Per-form responses page with export options
+@app.route('/admin/forms/<int:form_id>/responses', methods=['GET', 'POST'])
 @login_required
-def download_submission_pdf(id):
-    from export_utils import generate_submission_pdf
+@admin_required
+def admin_form_responses(form_id):
+    form = Form.query.get_or_404(form_id)
+    submissions = Submission.query.filter_by(form_id=form_id).order_by(Submission.created_at.desc()).all()
+    if request.method == 'POST':
+        fmt = request.form.get('format', 'excel')
+        include_details = request.form.get('include_details') == 'on'
+        if fmt == 'csv':
+            from export_utils import generate_submission_pdf, generate_submissions_csv, generate_submissions_excel, generate_detailed_submissions_excel, generate_detailed_submissions_csv
+            output = generate_detailed_submissions_csv(submissions) if include_details else generate_submissions_csv(submissions, include_field_data=False)
+            return send_file(
+                io.BytesIO(output.getvalue().encode()),
+                mimetype='text/csv',
+                as_attachment=True,
+                download_name=f'form_{form_id}_submissions.csv'
+            )
+        else:
+            from export_utils import generate_detailed_submissions_excel, generate_submissions_excel
+            output = generate_detailed_submissions_excel(submissions) if include_details else generate_submissions_excel(submissions, include_field_data=False)
+            return send_file(
+                output,
+                mimetype='application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+                as_attachment=True,
+                download_name=f'form_{form_id}_submissions.xlsx'
+            )
+    return render_template('admin/form_responses.html', form=form, submissions=submissions)
 
-    submission = Submission.query.filter_by(id=id, user_id=current_user.id).first_or_404()
+from sqlalchemy import text
 
-    pdf_buffer = generate_submission_pdf(submission)
+@app.route('/debug/hospitals')
+@login_required
+@admin_required
+def debug_hospitals():
+    try:
+        # Try to get hospitals using ORM
+        hospitals_orm = Hospital.query.order_by(Hospital.name).all()
+        app.logger.info(f'Found {len(hospitals_orm)} hospitals using ORM')
+        
+        # Try to get hospitals using raw SQL with text()
+        # First try with 'hospital' (singular)
+        try:
+            result = db.session.execute(text('SELECT id, name FROM hospital ORDER BY name'))
+            hospitals_sql = result.fetchall()
+            table_name = 'hospital'
+        except Exception as e:
+            # If that fails, try 'hospitals' (plural)
+            try:
+                result = db.session.execute(text('SELECT id, name FROM hospitals ORDER BY name'))
+                hospitals_sql = result.fetchall()
+                table_name = 'hospitals'
+            except Exception as e2:
+                hospitals_sql = []
+                table_name = 'unknown'
+                app.logger.warning(f'Could not find hospital table: {str(e2)}')
+        
+        # Get table names for debugging (MySQL version)
+        try:
+            tables = db.session.execute(text("SHOW TABLES")).fetchall()
+            # MySQL returns tuples like [('table1',), ('table2',)]
+            table_names = [t[0] for t in tables]
+        except Exception as e:
+            table_names = []
+            app.logger.warning(f'Could not list tables: {str(e)}')
+        
+        app.logger.info(f'Found {len(hospitals_sql)} hospitals in {table_name} table')
+        
+        # Return the results
+        return jsonify({
+            'tables': table_names,
+            'hospital_table_found': table_name in table_names,
+            'hospital_table_used': table_name,
+            'hospitals': [{'id': h[0], 'name': h[1]} for h in hospitals_sql] if hospitals_sql else []
+        })
+    except Exception as e:
+        app.logger.error(f'Error in debug_hospitals: {str(e)}')
+        return jsonify({'error': str(e)}), 500
 
-    return send_file(
-        pdf_buffer,
-        mimetype='application/pdf',
-        as_attachment=True,
-        download_name=f'submission_{submission.id}_{submission.form.name.replace(" ", "_")}.pdf'
-    )
+@app.route('/admin/export-forms')
+@login_required
+@admin_required
+def export_forms():
+    try:
+        # Get all hospitals, diseases, and doctors for filter dropdowns
+        hospitals = Hospital.query.order_by(Hospital.name).all()
+        diseases = Disease.query.order_by(Disease.name).all()
+        doctors = Doctor.query.order_by(Doctor.name).all()
+        
+        # Get the list of forms with submission counts and related data
+        forms_data = db.session.query(
+            Form,
+            Disease.name.label('disease_name'),
+            Hospital.name.label('hospital_name'),
+            Doctor.name.label('doctor_name'),
+            db.func.count(Submission.id).label('submission_count')
+        ).outerjoin(Submission, Form.id == Submission.form_id)\
+         .outerjoin(Disease, Form.disease_id == Disease.id)\
+         .outerjoin(Hospital, Form.hospital_id == Hospital.id)\
+         .outerjoin(Doctor, Form.doctor_id == Doctor.id)\
+         .group_by(Form.id, Disease.name, Hospital.name, Doctor.name)\
+         .order_by(Form.name)\
+         .all()
+             
+        # Process the forms data
+        forms = []
+        for form_data in forms_data:
+            form = {
+                'id': form_data[0].id,
+                'name': form_data[0].name,
+                'disease_name': form_data[1] or 'N/A',
+                'hospital_name': form_data[2] or 'N/A',
+                'doctor_name': form_data[3] or 'N/A',
+                'submission_count': form_data[4] or 0
+            }
+            forms.append(form)
+        
+        # Get filter parameters
+        filters = {
+            'form_id': request.args.get('form_id'),
+            'hospital_id': request.args.get('hospital_id'),
+            'disease_id': request.args.get('disease_id'),
+            'doctor_id': request.args.get('doctor_id'),
+            'start_date': request.args.get('start_date'),
+            'end_date': request.args.get('end_date')
+        }
+        
+        # Build base query for submissions
+        query = db.session.query(
+            Submission, Form, User, Hospital, Disease, Doctor
+        ).join(Form, Submission.form_id == Form.id)\
+         .join(User, Submission.user_id == User.id)\
+         .outerjoin(Hospital, Submission.hospital_id == Hospital.id)\
+         .outerjoin(Disease, Submission.disease_id == Disease.id)\
+         .outerjoin(Doctor, Submission.doctor_id == Doctor.id)
+        
+        # Apply filters
+        if filters['form_id'] and filters['form_id'] != 'all':
+            query = query.filter(Submission.form_id == filters['form_id'])
+        if filters['hospital_id'] and filters['hospital_id'] != 'all':
+            query = query.filter(Submission.hospital_id == filters['hospital_id'])
+        if filters['disease_id'] and filters['disease_id'] != 'all':
+            query = query.filter(Submission.disease_id == filters['disease_id'])
+        if filters['doctor_id'] and filters['doctor_id'] != 'all':
+            query = query.filter(Submission.doctor_id == filters['doctor_id'])
+        if filters['start_date']:
+            try:
+                start_date = datetime.strptime(filters['start_date'], '%Y-%m-%d')
+                query = query.filter(Submission.created_at >= start_date)
+            except ValueError:
+                pass
+        if filters['end_date']:
+            try:
+                end_date = datetime.strptime(filters['end_date'], '%Y-%m-%d')
+                end_date = end_date.replace(hour=23, minute=59, second=59)
+                query = query.filter(Submission.created_at <= end_date)
+            except ValueError:
+                pass
+        
+        # Get filtered submissions
+        submissions_data = query.order_by(Submission.created_at.desc()).limit(100).all()
+        
+        # Process submissions for the template
+        submissions = []
+        for sub_data in submissions_data:
+            submission = {
+                'id': sub_data[0].id,
+                'form': {
+                    'id': sub_data[1].id,
+                    'name': sub_data[1].name
+                },
+                'user': {
+                    'id': sub_data[2].id,
+                    'username': sub_data[2].username
+                },
+                'hospital': {
+                    'id': sub_data[3].id if sub_data[3] else None,
+                    'name': sub_data[3].name if sub_data[3] else 'N/A'
+                },
+                'disease': {
+                    'id': sub_data[4].id if sub_data[4] else None,
+                    'name': sub_data[4].name if sub_data[4] else 'N/A'
+                },
+                'doctor': {
+                    'id': sub_data[5].id if sub_data[5] else None,
+                    'name': sub_data[5].name if sub_data[5] else 'N/A'
+                },
+                'created_at': sub_data[0].created_at,
+                'status': sub_data[0].status
+            }
+            submissions.append(submission)
+        
+        return render_template('admin/export_forms.html',
+                           forms=forms,
+                           hospitals=hospitals,
+                           diseases=diseases,
+                           doctors=doctors,
+                           submissions=submissions,
+                           current_filters=filters)
+                           
+    except Exception as e:
+        app.logger.error(f'Error in export_forms: {str(e)}')
+        flash('An error occurred while loading the export page. Please try again.', 'error')
+        return redirect(url_for('admin_dashboard'))
 
 @app.route('/user/submissions/<int:id>/download-csv')
 @login_required
@@ -733,6 +1125,87 @@ def download_submission_csv(id):
         download_name=f'submission_{submission.id}.csv'
     )
 
+@app.route('/admin/submissions/export')
+@login_required
+@admin_required
+def export_user_data():
+    # Get filter parameters from request
+    user_id = request.args.get('user_id')
+    form_id = request.args.get('form_id')
+    status = request.args.get('status')
+    start_date = request.args.get('start_date')
+    end_date = request.args.get('end_date')
+    export_format = request.args.get('format', 'excel')
+
+    # Base query
+    query = Submission.query.join(User).join(Form).options(
+        db.joinedload(Submission.user),
+        db.joinedload(Submission.form),
+        db.joinedload(Submission.hospital),
+        db.joinedload(Submission.doctor),
+        db.joinedload(Submission.disease)
+    )
+
+    # Apply filters
+    if user_id and user_id != 'all':
+        query = query.filter(Submission.user_id == user_id)
+    if form_id and form_id != 'all':
+        query = query.filter(Submission.form_id == form_id)
+    if status and status != 'all':
+        query = query.filter(Submission.status == status)
+    if start_date:
+        try:
+            start_date = datetime.strptime(start_date, '%Y-%m-%d')
+            query = query.filter(Submission.created_at >= start_date)
+        except ValueError:
+            pass
+    if end_date:
+        try:
+            end_date = datetime.strptime(end_date, '%Y-%m-%d') + timedelta(days=1)
+            query = query.filter(Submission.created_at <= end_date)
+        except ValueError:
+            pass
+
+    # Get all submissions matching the filters
+    submissions = query.order_by(Submission.created_at.desc()).all()
+
+    # If export requested
+    if export_format in ['excel', 'csv']:
+        if export_format == 'excel':
+            excel_buffer = generate_detailed_submissions_excel(submissions)
+            return send_file(
+                excel_buffer,
+                mimetype='application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+                as_attachment=True,
+                download_name=f'submissions_export_{datetime.now().strftime("%Y%m%d_%H%M%S")}.xlsx'
+            )
+        else:
+            csv_buffer = generate_detailed_submissions_csv(submissions)
+            return send_file(
+                io.BytesIO(csv_buffer.getvalue().encode()),
+                mimetype='text/csv',
+                as_attachment=True,
+                download_name=f'submissions_export_{datetime.now().strftime("%Y%m%d_%H%M%S")}.csv'
+            )
+
+    # Get data for filter dropdowns
+    users = User.query.order_by(User.username).all()
+    forms = Form.query.order_by(Form.name).all()
+    statuses = ['submitted', 'approved', 'rejected', 'needs_revision']
+
+    return render_template('admin/export_data.html', 
+                         submissions=submissions,
+                         users=users,
+                         forms=forms,
+                         statuses=statuses,
+                         current_filters={
+                             'user_id': user_id,
+                             'form_id': form_id,
+                             'status': status,
+                             'start_date': start_date,
+                             'end_date': end_date
+                         })
+
 @app.route('/admin/submissions/<int:id>/download-pdf')
 @login_required
 @admin_required
@@ -746,5 +1219,5 @@ def admin_download_submission_pdf(id):
         pdf_buffer,
         mimetype='application/pdf',
         as_attachment=True,
-        download_name=f'submission_{submission.id}_{submission.form.name.replace(" ", "_")}.pdf'
+        download_name=f'submission_{submission.id}.pdf'
     )

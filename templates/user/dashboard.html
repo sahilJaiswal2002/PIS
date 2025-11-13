@@ -85,6 +85,7 @@
                     <th>Hospital</th>
                     <th>Status</th>
                     <th>Submitted</th>
+                    <th>Summary</th>
                     <th>Actions</th>
                 </tr>
             </thead>
@@ -103,9 +104,20 @@
                         </td>
                         <td>{{ submission.created_at.strftime('%b %d, %Y') }}</td>
                         <td>
+                            {% set preview = submission_previews.get(submission.id, []) %}
+                            {% if preview %}
+                                <ul class="body-small" style="margin:0; padding-left: 16px;">
+                                    {% for label, value in preview %}
+                                        <li><strong>{{ label }}:</strong> {{ value if value else '—' }}</li>
+                                    {% endfor %}
+                                </ul>
+                            {% else %}
+                                <span class="text-muted">No data</span>
+                            {% endif %}
+                        </td>
+                        <td>
                             <div class="flex gap-2">
                                 <a href="{{ url_for('user_view_submission', id=submission.id) }}" class="table-action-btn" title="View Details">👁️</a>
-                                <a href="{{ url_for('download_submission_pdf', id=submission.id) }}" class="table-action-btn" title="Download PDF">📄</a>
                                 <a href="{{ url_for('download_submission_csv', id=submission.id) }}" class="table-action-btn" title="Download CSV">📊</a>
                             </div>
                         </td>

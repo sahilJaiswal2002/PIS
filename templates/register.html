@@ -15,7 +15,6 @@
 
             <div class="form-group">
                 <label for="username">
-                    <span>👤</span>
                     <span>Username</span>
                 </label>
                 <input
@@ -31,7 +30,6 @@
 
             <div class="form-group">
                 <label for="email">
-                    <span>📧</span>
                     <span>Email Address</span>
                 </label>
                 <input
@@ -46,7 +44,6 @@
 
             <div class="form-group">
                 <label for="password">
-                    <span>🔐</span>
                     <span>Password</span>
                 </label>
                 <input
@@ -57,6 +54,13 @@
                     placeholder="Create a strong password"
                     autocomplete="new-password"
                 >
+            </div>
+
+            <div class="form-group">
+                <label class="checkbox-label" for="request_admin">
+                    <input type="checkbox" id="request_admin" name="request_admin">
+                    <span>Request admin access (requires existing admin approval)</span>
+                </label>
             </div>
 
             <button type="submit" class="btn btn-primary btn-block">Create Account →</button>

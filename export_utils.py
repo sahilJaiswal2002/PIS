@@ -132,12 +132,12 @@ def generate_submissions_csv(submissions, include_field_data=False):
     # Header row
     if include_field_data:
         writer.writerow([
-            'ID', 'Patient', 'Email', 'Form', 'Disease', 'Hospital', 'Doctor',
+            'ID', 'Patient', 'Email', 'Disease', 'Hospital', 'Doctor', 'Form',
             'Status', 'Form Version', 'Created At', 'Updated At'
         ])
     else:
         writer.writerow([
-            'ID', 'Patient', 'Email', 'Form', 'Disease', 'Hospital', 'Doctor',
+            'ID', 'Patient', 'Email', 'Disease', 'Hospital', 'Doctor', 'Form',
             'Status', 'Created At', 'Updated At'
         ])
     
@@ -147,10 +147,10 @@ def generate_submissions_csv(submissions, include_field_data=False):
             submission.id,
             submission.user.username,
             submission.user.email,
-            submission.form.name,
             submission.disease.name,
             submission.hospital.name,
             submission.doctor.name,
+            submission.form.name,
             submission.status,
             submission.created_at.strftime('%Y-%m-%d %H:%M:%S'),
             submission.updated_at.strftime('%Y-%m-%d %H:%M:%S')
@@ -166,43 +166,117 @@ def generate_submissions_csv(submissions, include_field_data=False):
 
 
 def generate_detailed_submissions_csv(submissions):
-    """Generate a detailed CSV with all form field responses"""
+    """Generate a detailed CSV with all form field responses in a clean, Excel-friendly format"""
     output = io.StringIO()
     writer = csv.writer(output)
 
     if not submissions:
         return output
 
-    # Build header with all possible fields
-    all_fields = set()
+    # Build a complete list of all possible fields across all submissions
+    all_fields = {}
     for sub in submissions:
         for field in sub.form.fields:
-            all_fields.add(field.field_label)
+            if field.field_label not in all_fields:
+                all_fields[field.field_label] = {
+                    'name': field.field_name,
+                    'type': field.field_type,
+                    'options': field.options
+                }
 
-    header = ['ID', 'Patient', 'Email', 'Form', 'Disease', 'Hospital', 'Doctor', 'Status', 'Created At']
-    header.extend(sorted(all_fields))
+    # Create header row with metadata and all possible fields
+    header = [
+        'Submission ID',
+        'Patient Name',
+        'Patient Email',
+        'Disease',
+        'Hospital',
+        'Doctor',
+        'Form Name',
+        'Submission Status',
+        'Submission Date',
+        *[f'[{field_type.upper()}] {label}' for label, field in all_fields.items()]
+    ]
     writer.writerow(header)
 
     # Write data rows
     for submission in submissions:
-        submission_data = json.loads(submission.data)
-        row = [
-            submission.id,
-            submission.user.username,
-            submission.user.email,
-            submission.form.name,
-            submission.disease.name,
-            submission.hospital.name,
-            submission.doctor.name,
-            submission.status,
-            submission.created_at.strftime('%Y-%m-%d %H:%M:%S')
-        ]
+        try:
+            # Handle both string and already-parsed JSON
+            if isinstance(submission.data, str):
+                submission_data = json.loads(submission.data)
+            else:
+                submission_data = submission.data
+        except (json.JSONDecodeError, AttributeError) as e:
+            print(f"Error parsing submission data: {e}")
+            submission_data = {}
+            
+        # Start with metadata columns
+        try:
+            row = [
+                submission.id,
+                submission.user.username if hasattr(submission, 'user') else '',
+                submission.user.email if hasattr(submission, 'user') else '',
+                submission.disease.name if hasattr(submission, 'disease') and submission.disease else '',
+                submission.hospital.name if hasattr(submission, 'hospital') and submission.hospital else '',
+                submission.doctor.name if hasattr(submission, 'doctor') and submission.doctor else '',
+                submission.form.name if hasattr(submission, 'form') and submission.form else '',
+                getattr(submission, 'status', ''),
+                submission.created_at.strftime('%Y-%m-%d %H:%M:%S') if hasattr(submission, 'created_at') else ''
+            ]
+        except Exception as e:
+            print(f"Error getting submission metadata: {e}")
+            row = [''] * 9  # Default empty row with 9 columns
 
-        # Add field data
-        for field in submission.form.fields:
-            field_key = f'field_{field.field_name}'
-            value = submission_data.get(field_key, '')
-            row.append(str(value))
+        # Add field values in the same order as the header
+        for label, field_info in all_fields.items():
+            field_name = field_info['name']
+            
+            # Try different possible field key formats
+            possible_keys = [
+                f'field_{field_name}',  # field_name
+                field_name,              # name (without field_ prefix)
+                f'field_{field_name.lower()}',  # lowercase
+                field_name.lower()              # lowercase without prefix
+            ]
+            
+            value = ''
+            for key in possible_keys:
+                if key in submission_data:
+                    value = submission_data[key]
+                    break
+            
+            # Handle different field types
+            if field_info['type'] in ['select', 'radio', 'checkbox'] and field_info['options']:
+                try:
+                    options = json.loads(field_info['options'])
+                    if isinstance(options, list):
+                        if field_info['type'] in ['select', 'radio'] and value:
+                            # Find matching option for select/radio
+                            for opt in options:
+                                if str(opt.get('value', '')).strip().lower() == str(value).strip().lower():
+                                    value = opt.get('label', value)
+                                    break
+                        elif field_info['type'] == 'checkbox' and value:
+                            # Handle multiple selections for checkboxes
+                            selected_values = [v.strip().lower() for v in str(value).split(',') if v.strip()]
+                            selected_labels = []
+                            for opt in options:
+                                opt_value = str(opt.get('value', '')).strip().lower()
+                                if opt_value in selected_values:
+                                    selected_labels.append(opt.get('label', opt_value))
+                            value = ', '.join(selected_labels) if selected_labels else value
+                except (json.JSONDecodeError, AttributeError) as e:
+                    print(f"Error processing options for field {field_name}: {e}")
+            
+            # Clean up the value for CSV
+            if value is None:
+                value = ''
+            elif field_info['type'] == 'file':
+                # For files, just indicate presence in CSV
+                value = 'File Attached' if value else ''
+            
+            row.append(str(value).strip() if value is not None else '')
 
         writer.writerow(row)
 
@@ -211,84 +285,179 @@ def generate_detailed_submissions_csv(submissions):
 
 
 def generate_submissions_excel(submissions, include_field_data=False):
-    """Generate an Excel file from submissions"""
+    """Generate an Excel file from submissions with improved formatting"""
     if not HAS_OPENPYXL:
         raise ImportError("openpyxl is required for Excel export. Install it with: pip install openpyxl")
 
+    from openpyxl.styles import Font, PatternFill, Border, Side, Alignment
+    from openpyxl.utils import get_column_letter
+    from openpyxl.worksheet.dimensions import ColumnDimension
+
     wb = Workbook()
     ws = wb.active
-    ws.title = "Submissions"
+    ws.title = "Patient Submissions"
 
-    # Define styles
-    header_fill = PatternFill(start_color="4472C4", end_color="4472C4", fill_type="solid")
-    header_font = Font(bold=True, color="FFFFFF")
-    border = Border(
-        left=Side(style='thin'),
-        right=Side(style='thin'),
-        top=Side(style='thin'),
-        bottom=Side(style='thin')
-    )
+    # Styling
+    header_font = Font(bold=True, color="FFFFFF", size=12)
+    header_fill = PatternFill(start_color="2F75B5", end_color="2F75B5", fill_type="solid")
+    border = Border(left=Side(style='thin'), right=Side(style='thin'),
+                   top=Side(style='thin'), bottom=Side(style='thin'))
+    
+    # Alignment
+    center_alignment = Alignment(horizontal='center', vertical='center', wrap_text=True)
+    left_alignment = Alignment(horizontal='left', vertical='center', wrap_text=True)
 
-    # Header row
-    headers = [
-        'ID', 'Patient', 'Email', 'Form', 'Disease', 'Hospital', 'Doctor',
-        'Status', 'Created At', 'Updated At'
-    ]
+    if not include_field_data:
+        # Basic export with just metadata
+        headers = [
+            'Submission ID', 'Patient Name', 'Email', 'Disease', 'Hospital', 
+            'Doctor', 'Form Name', 'Status', 'Form Version', 'Submission Date'
+        ]
+        ws.append(headers)
 
-    if include_field_data:
-        all_fields = set()
+        for submission in submissions:
+            row = [
+                submission.id,
+                submission.user.username,
+                submission.user.email,
+                submission.disease.name,
+                submission.hospital.name,
+                submission.doctor.name,
+                submission.form.name,
+                submission.status,
+                submission.form_version,
+                submission.created_at.strftime('%Y-%m-%d %H:%M:%S')
+            ]
+            ws.append(row)
+    else:
+        # Detailed export with form fields
+        # Get all unique field labels across all forms
+        all_fields = {}
         for sub in submissions:
             for field in sub.form.fields:
-                all_fields.add(field.field_label)
-        headers.extend(sorted(all_fields))
+                if field.field_label not in all_fields:
+                    all_fields[field.field_label] = {
+                        'name': field.field_name,
+                        'type': field.field_type,
+                        'options': field.options
+                    }
 
-    for col_num, header in enumerate(headers, 1):
-        cell = ws.cell(row=1, column=col_num)
-        cell.value = header
-        cell.fill = header_fill
-        cell.font = header_font
-        cell.border = border
-        cell.alignment = Alignment(horizontal="center", vertical="center")
-
-    # Data rows
-    for row_num, submission in enumerate(submissions, 2):
-        submission_data = json.loads(submission.data)
-
-        row_data = [
-            submission.id,
-            submission.user.username,
-            submission.user.email,
-            submission.form.name,
-            submission.disease.name,
-            submission.hospital.name,
-            submission.doctor.name,
-            submission.status,
-            submission.created_at.strftime('%Y-%m-%d %H:%M:%S'),
-            submission.updated_at.strftime('%Y-%m-%d %H:%M:%S')
+        # Create headers with field types
+        headers = [
+            'Submission ID',
+            'Patient Name',
+            'Email',
+            'Disease',
+            'Hospital',
+            'Doctor',
+            'Form Name',
+            'Status',
+            'Submission Date'
         ]
+        
+        # Add form field headers with their types
+        for label, field in all_fields.items():
+            headers.append(f"[{field['type'].upper()}] {label}")
+        
+        # Write headers
+        ws.append(headers)
 
-        if include_field_data:
-            for field in submission.form.fields:
-                field_key = f'field_{field.field_name}'
+        # Add data rows
+        for submission in submissions:
+            try:
+                submission_data = json.loads(submission.data)
+            except (json.JSONDecodeError, AttributeError):
+                submission_data = {}
+
+            # Start with metadata columns
+            row = [
+                submission.id,
+                submission.user.username,
+                submission.user.email,
+                submission.disease.name,
+                submission.hospital.name,
+                submission.doctor.name,
+                submission.form.name,
+                submission.status,
+                submission.created_at.strftime('%Y-%m-%d %H:%M:%S')
+            ]
+
+            # Add field values
+            for label, field_info in all_fields.items():
+                field_key = f'field_{field_info["name"]}'
                 value = submission_data.get(field_key, '')
-                row_data.append(str(value))
+                
+                # Handle different field types
+                if field_info['type'] in ['select', 'radio', 'checkbox'] and field_info['options']:
+                    try:
+                        options = json.loads(field_info['options'])
+                        if isinstance(options, list):
+                            if field_info['type'] in ['select', 'radio'] and value:
+                                # Find matching option for select/radio
+                                for opt in options:
+                                    if str(opt.get('value', '')).strip() == str(value).strip():
+                                        value = opt.get('label', value)
+                                        break
+                            elif field_info['type'] == 'checkbox' and value:
+                                # Handle multiple selections for checkboxes
+                                selected_values = [v.strip() for v in str(value).split(',') if v.strip()]
+                                selected_labels = []
+                                for opt in options:
+                                    opt_value = str(opt.get('value', '')).strip()
+                                    if opt_value in selected_values:
+                                        selected_labels.append(opt.get('label', opt_value))
+                                value = ', '.join(selected_labels) if selected_labels else value
+                    except (json.JSONDecodeError, AttributeError):
+                        pass
+                
+                # Clean up the value
+                if value is None:
+                    value = ''
+                row.append(str(value).strip())
 
-        for col_num, value in enumerate(row_data, 1):
-            cell = ws.cell(row=row_num, column=col_num)
-            cell.value = value
+            ws.append(row)
+
+    # Apply styling to header row
+    for cell in ws[1]:
+        cell.font = header_font
+        cell.fill = header_fill
+        cell.border = border
+        cell.alignment = center_alignment
+
+    # Apply styling to data rows
+    for row in ws.iter_rows(min_row=2, max_row=ws.max_row):
+        for cell in row:
             cell.border = border
-            cell.alignment = Alignment(horizontal="left", vertical="top", wrap_text=True)
+            cell.alignment = left_alignment
 
-    # Adjust column widths
-    ws.column_dimensions['A'].width = 8
-    ws.column_dimensions['B'].width = 15
-    ws.column_dimensions['C'].width = 20
-    ws.column_dimensions['D'].width = 20
-    ws.column_dimensions['E'].width = 20
-    ws.column_dimensions['F'].width = 20
-    ws.column_dimensions['G'].width = 15
-    ws.column_dimensions['H'].width = 12
-    ws.column_dimensions['I'].width = 18
+    # Auto-size columns with some reasonable limits
+    for column in ws.columns:
+        max_length = 0
+        column_letter = get_column_letter(column[0].column)
+        
+        # Check header length first
+        if column[0].row == 1:
+            max_length = len(str(column[0].value or ''))
+        
+        # Check data cells
+        for cell in column[1:]:  # Skip header
+            try:
+                cell_value = str(cell.value) if cell.value is not None else ''
+                # Count newlines for wrapped text
+                line_count = cell_value.count('\n') + 1
+                max_line_length = max(len(line) for line in cell_value.split('\n'))
+                
+                # Consider both width and height for wrapped text
+                cell_length = max(max_line_length, len(cell_value) // line_count)
+                if cell_length > max_length:
+                    max_length = cell_length
+            except:
+                pass
+        
+        # Set column width with limits
+        adjusted_width = (max_length + 4) * 1.1  # Add some padding
+        ws.column_dimensions[column_letter].width = min(max(adjusted_width, 10), 40)  # Min 10, Max 40
+    
     ws.column_dimensions['J'].width = 18
 
     for col_num in range(11, len(headers) + 1):

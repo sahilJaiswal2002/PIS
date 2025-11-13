@@ -1,0 +1,107 @@
+{% extends "admin/base.html" %}
+
+{% block title %}Export Form: {{ form.name }} - Admin{% endblock %}
+
+{% block content %}
+<div class="page-header-wrapper">
+  <div>
+    <h1 class="headline-medium">{{ form.name }}</h1>
+    <p class="text-muted">Disease: {{ form.disease.name }} • Version: {{ form.version }}</p>
+  </div>
+  <div>
+    <a class="btn" href="{{ url_for('export_forms_list') }}">← Back to forms</a>
+  </div>
+</div>
+
+<div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
+  <div class="lg:col-span-2">
+    <div class="card">
+      <div class="card-header">Submissions</div>
+      <div class="card-body">
+        <form method="get" class="form-wrapper mb-4">
+          <div class="form-group-row">
+            <div class="form-group">
+              <label class="form-label">From Date</label>
+              <input type="date" name="date_from" class="form-input" value="{{ date_from }}">
+            </div>
+            <div class="form-group">
+              <label class="form-label">To Date</label>
+              <input type="date" name="date_to" class="form-input" value="{{ date_to }}">
+            </div>
+            <div class="form-group">
+              <label class="form-label">Status</label>
+              <select name="status" class="form-select">
+                <option value="" {% if not status_filter %}selected{% endif %}>All</option>
+                <option value="submitted" {% if status_filter=='submitted' %}selected{% endif %}>Pending Review</option>
+                <option value="approved" {% if status_filter=='approved' %}selected{% endif %}>Approved</option>
+                <option value="rejected" {% if status_filter=='rejected' %}selected{% endif %}>Rejected</option>
+                <option value="needs_revision" {% if status_filter=='needs_revision' %}selected{% endif %}>Needs Revision</option>
+                <option value="reviewed" {% if status_filter=='reviewed' %}selected{% endif %}>Reviewed</option>
+              </select>
+            </div>
+          </div>
+          <div class="form-actions">
+            <button type="submit" class="btn btn-secondary">Apply Filters</button>
+          </div>
+        </form>
+
+        <div class="table-responsive">
+          <table class="table">
+            <thead>
+              <tr>
+                <th>ID</th>
+                <th>Patient</th>
+                <th>Status</th>
+                <th>Created</th>
+                <th>Updated</th>
+              </tr>
+            </thead>
+            <tbody>
+              {% for s in submissions %}
+              <tr>
+                <td>#{{ s.id }}</td>
+                <td>{{ s.user.username }}</td>
+                <td>{{ s.status }}</td>
+                <td>{{ s.created_at.strftime('%Y-%m-%d %H:%M') }}</td>
+                <td>{{ s.updated_at.strftime('%Y-%m-%d %H:%M') }}</td>
+              </tr>
+              {% else %}
+              <tr>
+                <td colspan="5" class="text-center text-muted">No submissions found for this form.</td>
+              </tr>
+              {% endfor %}
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div>
+    <div class="card">
+      <div class="card-header">Export</div>
+      <div class="card-body">
+        <form method="post" class="form-wrapper">
+          <div class="form-group">
+            <label class="form-label form-label-required">Format</label>
+            <select name="format" class="form-select" required>
+              <option value="excel">Excel (.xlsx)</option>
+              <option value="csv">CSV</option>
+            </select>
+          </div>
+          <div class="form-group">
+            <label class="checkbox-wrapper">
+              <input type="checkbox" name="include_details" class="checkbox-input">
+              <span>Include Detailed Form Responses</span>
+            </label>
+            <p class="form-helper-text">Adds all form fields as columns in the export.</p>
+          </div>
+          <div class="form-actions">
+            <button type="submit" class="btn btn-primary btn-lg">📥 Export</button>
+          </div>
+        </form>
+      </div>
+    </div>
+  </div>
+</div>
+{% endblock %}

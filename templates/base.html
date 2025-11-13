@@ -4,6 +4,18 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>{% block title %}IITB SCAN - Patient Data Collection{% endblock %}</title>
+    <script>
+        (function(){
+            try {
+                var s = localStorage.getItem('darkMode');
+                if (s === 'true') {
+                    document.documentElement.setAttribute('data-theme','dark');
+                } else if (s === 'false') {
+                    document.documentElement.removeAttribute('data-theme');
+                }
+            } catch(e) {}
+        })();
+    </script>
     <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
     {% block extra_css %}{% endblock %}
 </head>
@@ -24,7 +36,10 @@
     {% block content %}{% endblock %}
     
     <!-- Floating Dark Mode Toggle -->
-    <button data-toggle-dark-mode class="dark-mode-toggle" title="Toggle Dark Mode">🌙</button>
+    <button data-toggle-dark-mode class="dark-mode-toggle" title="Toggle Dark Mode">
+        <span class="moon-icon">🌙</span>
+        <span class="sun-icon" style="display: none;">☀️</span>
+    </button>
     
     <script src="{{ url_for('static', filename='js/main.js') }}"></script>
     {% block extra_js %}{% endblock %}

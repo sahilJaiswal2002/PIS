@@ -1,17 +1,58 @@
 from flask import Flask
 from flask_sqlalchemy import SQLAlchemy
 from flask_login import LoginManager
+from flask_migrate import Migrate
+from flask_wtf.csrf import CSRFProtect
+import logging
 import os
+from pathlib import Path
+from dotenv import load_dotenv
+
+load_dotenv(override=False)
 
 app = Flask(__name__)
 app.config['SECRET_KEY'] = os.environ.get('SESSION_SECRET', 'dev-secret-key-change-in-production')
-app.config['SQLALCHEMY_DATABASE_URI'] = os.environ.get('DATABASE_URL', 'sqlite:///iitb_scan.db').replace('postgres://', 'postgresql://')
-app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
 
+# Ensure instance and upload folders exist
+Path(app.instance_path).mkdir(parents=True, exist_ok=True)
+
+def _compute_database_url() -> str:
+    """Return a normalized SQLAlchemy URL with sensible defaults.
+    - Default: MySQL on localhost (DB: pis, user: root, pass: admin)
+    - Normalize legacy postgres:// to postgresql://
+    """
+    default_mysql_url = "mysql+pymysql://root:admin@localhost:3306/pis"
+    url = os.environ.get('DATABASE_URL', default_mysql_url)
+    if url.startswith('postgres://'):
+        url = url.replace('postgres://', 'postgresql://', 1)
+    return url
+
+app.config['SQLALCHEMY_DATABASE_URI'] = _compute_database_url()
+app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
+app.config['SQLALCHEMY_ENGINE_OPTIONS'] = {
+    'pool_pre_ping': True,
+    'pool_recycle': 280,
+}
+app.config['UPLOAD_FOLDER'] = os.environ.get('UPLOAD_FOLDER', 'static/uploads')
+
+# Ensure upload directory exists
+Path(app.config['UPLOAD_FOLDER']).mkdir(parents=True, exist_ok=True)
+
+# Initialize extensions
 db = SQLAlchemy(app)
+"""The global SQLAlchemy database handle used across the app."""
+migrate = Migrate(app, db)
+"""Flask-Migrate binder for Alembic migrations."""
 login_manager = LoginManager()
 login_manager.init_app(app)
 login_manager.login_view = 'login'
+
+# Enable CSRF protection
+csrf = CSRFProtect(app)
+
+# Basic production logging (Gunicorn will also configure handlers)
+if os.environ.get('LOG_LEVEL'):
+    logging.basicConfig(level=getattr(logging, os.environ['LOG_LEVEL'].upper(), logging.INFO))
 
 # Import routes after app initialization
 from routes import *

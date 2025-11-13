@@ -1,57 +1,69 @@
-{% extends "base.html" %}
-
-{% block title %}Login - IITB SCAN{% endblock %}
-
-{% block content %}
+{% extends "base.html" %} {% block title %}Login - IITB SCAN{% endblock %} {%
+block content %}
 <div class="auth-container">
-    <div class="auth-card">
-        <div class="auth-header">
-            <h1>🏥SCAN IITB</h1>
-            <p>Patient Data Collection</p>
-        </div>
-
-        <form method="POST" class="auth-form">
-            <h2>Welcome Back</h2>
-
-            <div class="form-group">
-                <label for="username">
-                    <span>👤</span>
-                    <span>Username</span>
-                </label>
-                <input
-                    type="text"
-                    id="username"
-                    name="username"
-                    required
-                    autofocus
-                    placeholder="Enter your username"
-                    autocomplete="username"
-                >
-            </div>
-
-            <div class="form-group">
-                <label for="password">
-                    <span>🔐</span>
-                    <span>Password</span>
-                </label>
-                <input
-                    type="password"
-                    id="password"
-                    name="password"
-                    required
-                    placeholder="Enter your password"
-                    autocomplete="current-password"
-                >
-            </div>
-
-            <button type="submit" class="btn btn-primary btn-block">Sign In →</button>
-
-            <div class="auth-footer">
-                <p><a href="{{ url_for('forgot_password') }}">Forgot Password?</a></p>
-                <p>New here? <a href="{{ url_for('register') }}">Create an account</a></p>
-                <p class="text-muted">📌 Demo: username='admin' | password='admin123'</p>
-            </div>
-        </form>
+  <div class="auth-card animate-glow">
+    <div class="auth-header">
+      
+      <p>SCAN IITB</p>
+      <p>Patient Information System</p>
     </div>
+
+    <form method="POST" class="auth-form" novalidate>
+      {{ form.hidden_tag() }}
+      <h2>Welcome Back</h2>
+
+      <div class="form-group">
+        <label for="username">
+          <span>Username</span>
+        </label>
+        {{ form.username(
+            class_="form-control",
+            id="username",
+            placeholder="Enter your username",
+            autocomplete="username",
+            autofocus=True
+        ) }}
+        {% if form.username.errors %}
+          {% for error in form.username.errors %}
+            <span class="form-error">{{ error }}</span>
+          {% endfor %}
+        {% endif %}
+      </div>
+
+      <div class="form-group">
+        <label for="password">
+          <span>Password</span>
+        </label>
+        {{ form.password(
+            class_="form-control",
+            id="password",
+            placeholder="Enter your password",
+            autocomplete="current-password"
+        ) }}
+        {% if form.password.errors %}
+          {% for error in form.password.errors %}
+            <span class="form-error">{{ error }}</span>
+          {% endfor %}
+        {% endif %}
+      </div>
+
+      <div class="form-group" style="display: flex; align-items: center; gap: 8px;">
+        {{ form.remember(id="remember") }}
+        <label for="remember" style="margin: 0;">Remember me</label>
+      </div>
+
+      {{ form.submit(class_="btn btn-primary btn-block") }}
+
+      <div class="auth-footer">
+        <p><a href="{{ url_for('forgot_password') }}">Forgot Password?</a></p>
+        <p>
+          New here? <a href="{{ url_for('register') }}">Create an account</a>
+        </p>
+        <p class="text-muted">
+          📌 Demo: username='admin' | password='admin123'
+        </p>
+      </div>
+    </form>
+  </div>
 </div>
 {% endblock %}

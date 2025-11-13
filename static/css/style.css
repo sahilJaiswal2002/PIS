@@ -115,48 +115,180 @@
     --text-dark: var(--md-sys-color-on-background);
     --text-muted: var(--md-sys-color-on-surface-variant);
     --sidebar-width: 250px;
+
+    /* Theming: gradient stops used in hero/auth backgrounds */
+    --gradient-start: #667eea;
+    --gradient-mid: #764ba2;
+    --gradient-end: #f093fb;
 }
 
 /* Dark Mode */
+/* Dark Mode - Applied when system preference is dark or when data-theme="dark" is set on html */
 @media (prefers-color-scheme: dark) {
-    :root {
+    :root:not([data-theme="light"]) {
         /* Dark Mode - Primary Colors */
         --md-sys-color-primary: #90CAF9;
         --md-sys-color-on-primary: #0D47A1;
-        --md-sys-color-primary-container: #1565C0;
-        --md-sys-color-on-primary-container: #E3F2FD;
+        --md-sys-color-primary-container: #1E88E5;
+        --md-sys-color-on-primary-container: #FFFFFF;
 
         /* Dark Mode - Secondary */
         --md-sys-color-secondary: #64B5F6;
         --md-sys-color-on-secondary: #0D47A1;
-        --md-sys-color-secondary-container: #1565C0;
-        --md-sys-color-on-secondary-container: #E3F2FD;
+        --md-sys-color-secondary-container: #1976D2;
+        --md-sys-color-on-secondary-container: #FFFFFF;
 
         /* Dark Mode - Tertiary */
         --md-sys-color-tertiary: #81C784;
         --md-sys-color-on-tertiary: #1B5E20;
-        --md-sys-color-tertiary-container: #2E7D32;
-        --md-sys-color-on-tertiary-container: #C8E6C9;
+        --md-sys-color-tertiary-container: #4CAF50;
+        --md-sys-color-on-tertiary-container: #FFFFFF;
 
         /* Dark Mode - Error */
-        --md-sys-color-error: #EF5350;
+        --md-sys-color-error: #EF9A9A;
         --md-sys-color-on-error: #C62828;
-        --md-sys-color-error-container: #B71C1C;
-        --md-sys-color-on-error-container: #FFCDD2;
+        --md-sys-color-error-container: #D32F2F;
+        --md-sys-color-on-error-container: #FFFFFF;
 
-        /* Dark Mode - Surfaces */
-        --md-sys-color-background: #121212;
-        --md-sys-color-surface: #1E1E1E;
-        --md-sys-color-surface-variant: #2C2C2C;
-        --md-sys-color-surface-dim: #0A0A0A;
-        --md-sys-color-on-background: #E1E1E1;
-        --md-sys-color-on-surface: #E1E1E1;
-        --md-sys-color-on-surface-variant: #9E9E9E;
+        /* Dark Mode - Warning */
+        --md-sys-color-warning: #FFB74D;
+        --md-sys-color-on-warning: #E65100;
+        --md-sys-color-warning-container: #F57C00;
+        --md-sys-color-on-warning-container: #FFFFFF;
+
+        /* Dark Mode - Success */
+        --md-sys-color-success: #81C784;
+        --md-sys-color-on-success: #1B5E20;
+        --md-sys-color-success-container: #4CAF50;
+        --md-sys-color-on-success-container: #FFFFFF;
+
+        /* Dark Mode - Info */
+        --md-sys-color-info: #4FC3F7;
+        --md-sys-color-on-info: #01579B;
+        --md-sys-color-info-container: #0288D1;
+        --md-sys-color-on-info-container: #FFFFFF;
+
+        /* Dark Mode - Surface */
+        --md-sys-color-surface: #121212;
+        --md-sys-color-on-surface: #E0E0E0;
+        --md-sys-color-surface-variant: #1E1E1E;
+        --md-sys-color-on-surface-variant: #B0B0B0;
+        --md-sys-color-surface-container: #1E1E1E;
+        --md-sys-color-surface-container-high: #2D2D2D;
+        --md-sys-color-surface-container-highest: #3D3D3D;
+        --md-sys-color-surface-container-low: #121212;
+        --md-sys-color-surface-container-lowest: #0D0D0D;
+        --md-sys-color-surface-bright: #3D3D3D;
+        --md-sys-color-surface-dim: #121212;
 
         /* Dark Mode - Outline */
-        --md-sys-color-outline: #424242;
-        --md-sys-color-outline-variant: #616161;
+        --md-sys-color-outline: #8E8E8E;
+        --md-sys-color-outline-variant: #3D3D3D;
+
+        /* Dark Mode - Background */
+        --md-sys-color-background: #121212;
+        --md-sys-color-on-background: #E0E0E0;
+
+        /* Dark Mode - Inverse */
+        --md-sys-color-inverse-primary: #1976D2;
+        --md-sys-color-inverse-surface: #E0E0E0;
+        --md-sys-color-inverse-on-surface: #121212;
+
+        /* Dark Mode - Shadow */
+        --md-sys-color-shadow: #000000;
+        --md-sys-color-scrim: #000000;
+        --md-sys-color-surface-tint: #90CAF9;
+
+        /* Dark Mode - Elevation */
+        --md-sys-elevation-1: 0 2px 1px -1px rgba(0,0,0,.2), 0 1px 1px 0 rgba(0,0,0,.14), 0 1px 3px 0 rgba(0,0,0,.12);
+        --md-sys-elevation-2: 0 3px 1px -2px rgba(0,0,0,.2), 0 2px 2px 0 rgba(0,0,0,.14), 0 1px 5px 0 rgba(0,0,0,.12);
+        --md-sys-elevation-3: 0 3px 3px -2px rgba(0,0,0,.2), 0 3px 4px 0 rgba(0,0,0,.14), 0 1px 8px 0 rgba(0,0,0,.12);
+        --md-sys-elevation-4: 0 2px 4px -1px rgba(0,0,0,.2), 0 4px 5px 0 rgba(0,0,0,.14), 0 1px 10px 0 rgba(0,0,0,.12);
+        --md-sys-elevation-5: 0 3px 5px -1px rgba(0,0,0,.2), 0 5px 8px 0 rgba(0,0,0,.14), 0 1px 14px 0 rgba(0,0,0,.12);
     }
+}
+
+/* Dark Mode - Applied when data-theme="dark" is set on html, regardless of system preference */
+html[data-theme="dark"] {
+    /* Dark Mode - Primary Colors */
+    --md-sys-color-primary: #90CAF9;
+    --md-sys-color-on-primary: #0D47A1;
+    --md-sys-color-primary-container: #1E88E5;
+    --md-sys-color-on-primary-container: #FFFFFF;
+
+    /* Dark Mode - Secondary */
+    --md-sys-color-secondary: #64B5F6;
+    --md-sys-color-on-secondary: #0D47A1;
+    --md-sys-color-secondary-container: #1976D2;
+    --md-sys-color-on-secondary-container: #FFFFFF;
+
+    /* Dark Mode - Tertiary */
+    --md-sys-color-tertiary: #81C784;
+    --md-sys-color-on-tertiary: #1B5E20;
+    --md-sys-color-tertiary-container: #4CAF50;
+    --md-sys-color-on-tertiary-container: #FFFFFF;
+
+    /* Dark Mode - Error */
+    --md-sys-color-error: #EF9A9A;
+    --md-sys-color-on-error: #C62828;
+    --md-sys-color-error-container: #D32F2F;
+    --md-sys-color-on-error-container: #FFFFFF;
+
+    /* Dark Mode - Warning */
+    --md-sys-color-warning: #FFB74D;
+    --md-sys-color-on-warning: #E65100;
+    --md-sys-color-warning-container: #F57C00;
+    --md-sys-color-on-warning-container: #FFFFFF;
+
+    /* Dark Mode - Success */
+    --md-sys-color-success: #81C784;
+    --md-sys-color-on-success: #1B5E20;
+    --md-sys-color-success-container: #4CAF50;
+    --md-sys-color-on-success-container: #FFFFFF;
+
+    /* Dark Mode - Info */
+    --md-sys-color-info: #4FC3F7;
+    --md-sys-color-on-info: #01579B;
+    --md-sys-color-info-container: #0288D1;
+    --md-sys-color-on-info-container: #FFFFFF;
+
+    /* Dark Mode - Surface */
+    --md-sys-color-surface: #121212;
+    --md-sys-color-on-surface: #E0E0E0;
+    --md-sys-color-surface-variant: #1E1E1E;
+    --md-sys-color-on-surface-variant: #B0B0B0;
+    --md-sys-color-surface-container: #1E1E1E;
+    --md-sys-color-surface-container-high: #2D2D2D;
+    --md-sys-color-surface-container-highest: #3D3D3D;
+    --md-sys-color-surface-container-low: #121212;
+    --md-sys-color-surface-container-lowest: #0D0D0D;
+    --md-sys-color-surface-bright: #3D3D3D;
+    --md-sys-color-surface-dim: #121212;
+
+    /* Dark Mode - Outline */
+    --md-sys-color-outline: #8E8E8E;
+    --md-sys-color-outline-variant: #3D3D3D;
+
+    /* Dark Mode - Background */
+    --md-sys-color-background: #121212;
+    --md-sys-color-on-background: #E0E0E0;
+
+    /* Dark Mode - Inverse */
+    --md-sys-color-inverse-primary: #1976D2;
+    --md-sys-color-inverse-surface: #E0E0E0;
+    --md-sys-color-inverse-on-surface: #121212;
+
+    /* Dark Mode - Shadow */
+    --md-sys-color-shadow: #000000;
+    --md-sys-color-scrim: #000000;
+    --md-sys-color-surface-tint: #90CAF9;
+
+    /* Dark Mode - Elevation */
+    --md-sys-elevation-1: 0 2px 1px -1px rgba(0,0,0,.2), 0 1px 1px 0 rgba(0,0,0,.14), 0 1px 3px 0 rgba(0,0,0,.12);
+    --md-sys-elevation-2: 0 3px 1px -2px rgba(0,0,0,.2), 0 2px 2px 0 rgba(0,0,0,.14), 0 1px 5px 0 rgba(0,0,0,.12);
+    --md-sys-elevation-3: 0 3px 3px -2px rgba(0,0,0,.2), 0 3px 4px 0 rgba(0,0,0,.14), 0 1px 8px 0 rgba(0,0,0,.12);
+    --md-sys-elevation-4: 0 2px 4px -1px rgba(0,0,0,.2), 0 4px 5px 0 rgba(0,0,0,.14), 0 1px 10px 0 rgba(0,0,0,.12);
+    --md-sys-elevation-5: 0 3px 5px -1px rgba(0,0,0,.2), 0 5px 8px 0 rgba(0,0,0,.14), 0 1px 14px 0 rgba(0,0,0,.12);
 }
 
 /* Override dark mode for explicit dark theme class */
@@ -186,6 +318,11 @@
     --md-sys-color-on-surface-variant: #9E9E9E;
     --md-sys-color-outline: #424242;
     --md-sys-color-outline-variant: #616161;
+
+    /* Dark gradients tuned for low luminance */
+    --gradient-start: #0f172a; /* slate-900 */
+    --gradient-mid: #1e293b;   /* slate-800 */
+    --gradient-end: #334155;   /* slate-700 */
 }
 
 /* ===== Global Styles ===== */
@@ -372,7 +509,7 @@ a:hover {
     align-items: center;
     justify-content: center;
     min-height: 100vh;
-    background: linear-gradient(135deg, #667eea 0%, #764ba2 50%, #f093fb 100%);
+    background: linear-gradient(135deg, var(--gradient-start) 0%, var(--gradient-mid) 50%, var(--gradient-end) 100%);
     background-attachment: fixed;
     padding: var(--md-sys-spacing-4);
     position: relative;
@@ -431,6 +568,30 @@ a:hover {
     margin-bottom: var(--md-sys-spacing-8);
     padding-bottom: var(--md-sys-spacing-6);
     border-bottom: 2px solid var(--md-sys-color-outline);
+}
+
+/* Brand/logo block in auth headers */
+.brand-logo {
+    display: inline-flex;
+    align-items: center;
+    gap: 12px;
+}
+
+.brand-logo img {
+    height: 40px;
+    width: auto;
+    border-radius: 4px;
+}
+
+/* Wider logos in admin sidebar and user topbar */
+.admin-sidebar .brand-logo img {
+    width: 180px;
+    height: auto;
+}
+
+.user-topbar .brand-logo img {
+    width: 140px;
+    height: auto;
 }
 
 .auth-card-header h1,
@@ -612,6 +773,39 @@ a:hover {
     z-index: 100;
 }
 
+/* Light mode: use light surfaces and black text */
+html:not([data-theme="dark"]) .admin-sidebar {
+    background: var(--md-sys-color-surface);
+    color: #000;
+}
+html:not([data-theme="dark"]) .admin-sidebar .sidebar-brand {
+    border-bottom: 1px solid var(--md-sys-color-outline);
+}
+html:not([data-theme="dark"]) .admin-sidebar .sidebar-brand p {
+    color: var(--md-sys-color-on-surface-variant);
+}
+html:not([data-theme="dark"]) .admin-sidebar .sidebar-nav-link {
+    color: var(--md-sys-color-on-surface);
+}
+html:not([data-theme="dark"]) .admin-sidebar .sidebar-nav-link:hover {
+    background: var(--md-sys-color-surface-variant);
+    color: var(--md-sys-color-on-surface);
+}
+html:not([data-theme="dark"]) .admin-sidebar .sidebar-nav-link.active {
+    background: var(--md-sys-color-primary);
+    color: var(--md-sys-color-on-primary);
+    border-left: 4px solid var(--md-sys-color-tertiary);
+}
+html:not([data-theme="dark"]) .admin-sidebar .sidebar-footer {
+    border-top: 1px solid var(--md-sys-color-outline);
+}
+html:not([data-theme="dark"]) .admin-sidebar .sidebar-user-name {
+    color: var(--md-sys-color-on-surface);
+}
+html:not([data-theme="dark"]) .admin-sidebar .sidebar-user-role {
+    color: var(--md-sys-color-on-surface-variant);
+}
+
 .sidebar-brand {
     padding: var(--md-sys-spacing-5);
     border-bottom: 1px solid rgba(255, 255, 255, 0.1);
@@ -724,6 +918,12 @@ a:hover {
     align-items: center;
     sticky: top;
     z-index: 50;
+}
+
+.topbar-brand .brand-logo img {
+    height: auto; /* overridden by width below */
+    width: 140px;
+    margin-right: 8px;
 }
 
 .topbar-brand h2 {
@@ -926,6 +1126,167 @@ a:hover {
     margin-bottom: var(--md-sys-spacing-2);
     font-weight: 500;
     font-size: var(--md-sys-typescale-label-large-font-size);
+    color: var(--md-sys-color-on-surface);
+}
+
+/* ===== Form Styling ===== */
+.form-container {
+    max-width: 800px;
+    margin: 2rem auto;
+    padding: 0 1rem;
+}
+
+.form-card {
+    background: var(--md-sys-color-surface);
+    border-radius: 12px;
+    box-shadow: var(--md-sys-shadow-2);
+    overflow: hidden;
+}
+
+.form-card-header {
+    padding: 1.5rem;
+    background: var(--md-sys-color-primary-container);
+    color: var(--md-sys-color-on-primary-container);
+}
+
+.form-card-header h2 {
+    margin: 0;
+    font-size: 1.5rem;
+    font-weight: 600;
+}
+
+.form-card-header p {
+    margin: 0.5rem 0 0;
+    opacity: 0.9;
+}
+
+.patient-form {
+    padding: 1.5rem;
+}
+
+.gform-question {
+    margin-bottom: 1.5rem;
+    padding: 1rem;
+    background: var(--md-sys-color-surface-variant);
+    border-radius: 8px;
+    transition: all 0.2s ease;
+}
+
+.gform-question:focus-within {
+    box-shadow: 0 0 0 2px var(--md-sys-color-primary);
+}
+
+.gform-label {
+    margin-bottom: 0.75rem;
+}
+
+.question-title {
+    display: block;
+    font-size: 1rem;
+    font-weight: 600;
+    color: var(--md-sys-color-on-surface);
+    margin-bottom: 0.5rem;
+}
+
+.required {
+    color: var(--md-sys-color-error);
+    margin-left: 0.25rem;
+}
+
+.gform-control {
+    width: 100%;
+}
+
+.gform-input,
+.gform-textarea,
+.gform-select {
+    width: 100%;
+    padding: 0.75rem;
+    border: 1px solid var(--md-sys-color-outline);
+    border-radius: 6px;
+    font-size: 1rem;
+    transition: all 0.2s ease;
+    background: var(--md-sys-color-surface);
+    color: var(--md-sys-color-on-surface);
+}
+
+.gform-input:focus,
+.gform-textarea:focus,
+.gform-select:focus {
+    outline: none;
+    border-color: var(--md-sys-color-primary);
+    box-shadow: 0 0 0 2px rgba(33, 150, 243, 0.2);
+}
+
+.gform-textarea {
+    min-height: 120px;
+    resize: vertical;
+}
+
+.gform-options {
+    display: flex;
+    flex-direction: column;
+    gap: 0.75rem;
+}
+
+.gform-option {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    cursor: pointer;
+    padding: 0.5rem;
+    border-radius: 4px;
+    transition: background 0.2s ease;
+}
+
+.gform-option:hover {
+    background: rgba(0, 0, 0, 0.05);
+}
+
+.gform-option input[type="radio"],
+.gform-option input[type="checkbox"] {
+    width: 18px;
+    height: 18px;
+}
+
+/* Responsive adjustments */
+@media (max-width: 768px) {
+    .form-container {
+        padding: 0 1rem;
+    }
+    
+    .form-card-header {
+        padding: 1.25rem;
+    }
+    
+    .form-card-header h2 {
+        font-size: 1.25rem;
+    }
+    
+    .patient-form {
+        padding: 1rem;
+    }
+    
+    .gform-question {
+        padding: 0.75rem;
+        margin-bottom: 1rem;
+    }
+}
+
+/* Dark mode adjustments */
+[data-theme="dark"] .gform-question {
+    background: var(--md-sys-color-surface-variant);
+}
+
+[data-theme="dark"] .gform-option:hover {
+    background: rgba(255, 255, 255, 0.05);
+}
+
+[data-theme="dark"] .gform-input,
+[data-theme="dark"] .gform-textarea,
+[data-theme="dark"] .gform-select {
+    background: var(--md-sys-color-surface);
+    border-color: var(--md-sys-color-outline);
     color: var(--md-sys-color-on-surface);
 }
 
@@ -1770,6 +2131,70 @@ a:hover {
     animation: glow 2s ease-in-out infinite;
 }
 
+/* ===== Neuroscience-inspired Animations ===== */
+
+/* Animated neural network background (subtle moving nodes and links) */
+.neural-bg {
+    position: relative;
+    overflow: hidden;
+}
+
+.neural-bg::before,
+.neural-bg::after {
+    content: '';
+    position: absolute;
+    inset: -20%;
+    background: radial-gradient(circle at 20% 30%, rgba(33,150,243,0.06), transparent 40%),
+                radial-gradient(circle at 80% 70%, rgba(76,175,80,0.06), transparent 45%),
+                radial-gradient(circle at 50% 50%, rgba(118,75,162,0.06), transparent 40%);
+    filter: blur(30px);
+    animation: neuralDrift 30s linear infinite;
+    pointer-events: none;
+    z-index: 0;
+}
+
+.neural-bg::after {
+    animation-duration: 45s;
+    animation-direction: reverse;
+    opacity: 0.7;
+}
+
+@keyframes neuralDrift {
+    0% { transform: translate3d(0,0,0) scale(1); }
+    50% { transform: translate3d(3%, -2%, 0) scale(1.05); }
+    100% { transform: translate3d(0,0,0) scale(1); }
+}
+
+/* Subtle synaptic pulse for brand/logo */
+.brand-logo img {
+    animation: synapsePulse 6s ease-in-out infinite;
+}
+
+@keyframes synapsePulse {
+    0%, 100% { filter: drop-shadow(0 0 0 rgba(33,150,243,0)); transform: scale(1); }
+    50% { filter: drop-shadow(0 0 8px rgba(33,150,243,0.35)); transform: scale(1.015); }
+}
+
+/* Neuron-like connection shimmer on cards */
+.card::after {
+    content: '';
+    position: absolute;
+    inset: 0;
+    border-radius: var(--md-sys-shape-corner-large);
+    background: linear-gradient(120deg, transparent 0%, rgba(255,255,255,0.06) 15%, transparent 30%);
+    transform: translateX(-100%);
+    pointer-events: none;
+}
+
+.card:hover::after {
+    animation: axonSweep 1.2s ease;
+}
+
+@keyframes axonSweep {
+    from { transform: translateX(-100%); }
+    to { transform: translateX(100%); }
+}
+
 /* Card hover animations */
 .card,
 .card-wrapper {
@@ -1806,6 +2231,11 @@ a:hover {
     height: 300px;
 }
 
+/* Smooth cross-fade when toggling themes */
+.theme-transition * {
+    transition: background-color 200ms ease, color 200ms ease, border-color 200ms ease !important;
+}
+
 /* Loading spinner */
 .spinner {
     display: inline-block;
@@ -1837,8 +2267,8 @@ textarea {
     position: fixed;
     bottom: 20px;
     right: 20px;
-    width: 60px;
-    height: 60px;
+    width: 48px;
+    height: 48px;
     border-radius: 50%;
     background: var(--md-sys-color-primary);
     color: var(--md-sys-color-on-primary);
@@ -1851,6 +2281,8 @@ textarea {
     box-shadow: var(--md-sys-shadow-3);
     z-index: 1000;
     transition: all 0.3s ease;
+    padding: 0;
+    line-height: 1;
 }
 
 .dark-mode-toggle:hover {
@@ -1862,24 +2294,37 @@ textarea {
     transform: scale(0.95);
 }
 
+.dark-mode-toggle .moon-icon,
+.dark-mode-toggle .sun-icon {
+    display: inline-block;
+    width: 24px;
+    height: 24px;
+    line-height: 1;
+    text-align: center;
+    transition: opacity 0.3s ease, transform 0.3s ease;
+}
+
 /* Navbar dark mode toggle */
 .theme-toggle-btn {
     background: var(--md-sys-color-surface-variant);
     color: var(--md-sys-color-on-surface);
-    padding: var(--md-sys-spacing-2) var(--md-sys-spacing-4);
-    border-radius: var(--md-sys-shape-corner-small);
+    padding: 8px;
+    border-radius: 50%;
     border: 1px solid var(--md-sys-color-outline);
     cursor: pointer;
-    font-size: var(--md-sys-typescale-label-large-font-size);
+    font-size: 20px;
     transition: all 0.2s ease;
     display: flex;
     align-items: center;
-    gap: var(--md-sys-spacing-2);
+    justify-content: center;
+    width: 40px;
+    height: 40px;
 }
 
 .theme-toggle-btn:hover {
     background: var(--md-sys-color-primary-container);
     color: var(--md-sys-color-on-primary-container);
     border-color: var(--md-sys-color-primary);
+    transform: rotate(15deg);
 }
 

@@ -1,32 +1,63 @@
 // Main JavaScript file for IITB SCAN - Patient Data Collection System
 
 // ===== Auto-Hide Flash Messages =====
-document.addEventListener('DOMContentLoaded', function() {
+function setupFlashMessages() {
     const alerts = document.querySelectorAll('.alert');
     alerts.forEach(function(alert) {
+        // Skip if already initialized
+        if (alert.dataset.initialized) return;
+        
+        // Mark as initialized
+        alert.dataset.initialized = 'true';
+        
+        // Set initial styles
+        alert.style.transition = 'opacity 0.3s ease, transform 0.3s ease';
+        alert.style.opacity = '1';
+        
+        // Auto-hide after delay
         setTimeout(function() {
             alert.style.opacity = '0';
             alert.style.transform = 'translateX(100%)';
+            
+            // Remove from DOM after animation completes
             setTimeout(function() {
-                alert.remove();
+                if (alert.parentNode) {
+                    alert.parentNode.removeChild(alert);
+                }
             }, 300);
         }, 5000);
+        
+        // Add click handler to manually dismiss
+        const closeBtn = alert.querySelector('.alert-close-btn');
+        if (closeBtn) {
+            closeBtn.addEventListener('click', function() {
+                alert.style.opacity = '0';
+                alert.style.transform = 'translateX(100%)';
+                setTimeout(() => {
+                    if (alert.parentNode) {
+                        alert.parentNode.removeChild(alert);
+                    }
+                }, 300);
+            });
+        }
     });
-});
+}
 
 // ===== Modal Management =====
-document.addEventListener('click', function(e) {
-    if (e.target.classList.contains('modal-overlay')) {
-        e.target.classList.remove('open');
-    }
-});
-
-// Close modal button handler
-document.querySelectorAll('.modal-close-btn').forEach(function(btn) {
-    btn.addEventListener('click', function() {
-        this.closest('.modal-overlay').classList.remove('open');
+function setupModalManagement() {
+    document.addEventListener('click', function(e) {
+        if (e.target.classList.contains('modal-overlay')) {
+            e.target.classList.remove('open');
+        }
     });
-});
+
+    // Close modal button handler
+    document.querySelectorAll('.modal-close-btn').forEach(function(btn) {
+        btn.addEventListener('click', function() {
+            this.closest('.modal-overlay').classList.remove('open');
+        });
+    });
+}
 
 // ===== Form Enhancements =====
 
@@ -104,24 +135,18 @@ function clearDraft() {
 }
 
 // Add form change listeners
-document.querySelectorAll('.multi-step-form input, .multi-step-form select, .multi-step-form textarea').forEach(function(field) {
-    field.addEventListener('change', function() {
-        updateFormProgress();
-        autoSaveDraft();
+function setupFormChangeListeners() {
+    document.querySelectorAll('.multi-step-form input, .multi-step-form select, .multi-step-form textarea').forEach(function(field) {
+        field.addEventListener('change', function() {
+            updateFormProgress();
+            autoSaveDraft();
+        });
+        
+        field.addEventListener('input', function() {
+            updateFormProgress();
+        });
     });
-    
-    field.addEventListener('input', function() {
-        updateFormProgress();
-    });
-});
-
-// Initialize form on page load
-document.addEventListener('DOMContentLoaded', function() {
-    if (document.querySelector('.multi-step-form')) {
-        restoreDraft();
-        updateFormProgress();
-    }
-});
+}
 
 // Form validation
 function validateForm(form) {
@@ -141,93 +166,145 @@ function validateForm(form) {
 }
 
 // Prevent form double submission
-document.querySelectorAll('form').forEach(function(form) {
-    form.addEventListener('submit', function(e) {
-        const submitBtn = form.querySelector('button[type="submit"]');
-        if (submitBtn && submitBtn.disabled) {
-            e.preventDefault();
-            return false;
-        }
-        
-        if (submitBtn) {
-            submitBtn.disabled = true;
-            const originalText = submitBtn.textContent;
-            submitBtn.textContent = '⏳ Processing...';
+function setupFormSubmissionHandlers() {
+    document.querySelectorAll('form').forEach(function(form) {
+        form.addEventListener('submit', function(e) {
+            const submitBtn = form.querySelector('button[type="submit"]');
+            if (submitBtn && submitBtn.disabled) {
+                e.preventDefault();
+                return false;
+            }
             
-            // Restore button after a timeout if form submission fails
-            setTimeout(function() {
-                submitBtn.disabled = false;
-                submitBtn.textContent = originalText;
-            }, 30000); // 30 second timeout
-        }
-        
-        // Clear draft on successful submission
-        if (form.classList.contains('multi-step-form')) {
-            // Will be cleared after form submission succeeds
-            clearDraft();
-        }
+            if (submitBtn) {
+                submitBtn.disabled = true;
+                const originalText = submitBtn.textContent;
+                submitBtn.textContent = '⏳ Processing...';
+                
+                // Restore button after a timeout if form submission fails
+                setTimeout(function() {
+                    submitBtn.disabled = false;
+                    submitBtn.textContent = originalText;
+                }, 30000); // 30 second timeout
+            }
+            
+            // Clear draft on successful submission
+            if (form.classList.contains('multi-step-form')) {
+                // Will be cleared after form submission succeeds
+                clearDraft();
+            }
+        });
     });
-});
+}
 
 // ===== Dark Mode Theme =====
 
-function initializeDarkMode() {
-    const storedDarkMode = localStorage.getItem('darkMode');
-    const prefersDark = window.matchMedia('(prefers-color-scheme: dark)').matches;
+// Make functions globally available
+window.initializeDarkMode = function() {
+    try {
+        const storedDarkMode = localStorage.getItem('darkMode');
+        const prefersDark = window.matchMedia('(prefers-color-scheme: dark)').matches;
+        const isDarkMode = storedDarkMode === 'true' || (storedDarkMode === null && prefersDark);
 
-    const isDarkMode = storedDarkMode === 'true' || (storedDarkMode === null && prefersDark);
-
-    if (isDarkMode) {
-        document.documentElement.setAttribute('data-theme', 'dark');
-        updateDarkModeButtons(true);
-    } else {
-        document.documentElement.removeAttribute('data-theme');
-        updateDarkModeButtons(false);
+        if (isDarkMode) {
+            document.documentElement.setAttribute('data-theme', 'dark');
+            updateDarkModeButtons(true);
+        } else {
+            document.documentElement.removeAttribute('data-theme');
+            updateDarkModeButtons(false);
+        }
+    } catch (e) {
+        console.error('Error initializing dark mode:', e);
     }
-}
+};
 
-function toggleDarkMode() {
-    const isDarkMode = document.documentElement.getAttribute('data-theme') === 'dark';
+window.toggleDarkMode = function() {
+    try {
+        const isDarkMode = document.documentElement.getAttribute('data-theme') === 'dark';
 
-    if (isDarkMode) {
-        document.documentElement.removeAttribute('data-theme');
-        localStorage.setItem('darkMode', 'false');
-        updateDarkModeButtons(false);
-    } else {
-        document.documentElement.setAttribute('data-theme', 'dark');
-        localStorage.setItem('darkMode', 'true');
-        updateDarkModeButtons(true);
+        // brief transition helper
+        document.documentElement.classList.add('theme-transition');
+
+        if (isDarkMode) {
+            document.documentElement.removeAttribute('data-theme');
+            localStorage.setItem('darkMode', 'false');
+            updateDarkModeButtons(false);
+        } else {
+            document.documentElement.setAttribute('data-theme', 'dark');
+            localStorage.setItem('darkMode', 'true');
+            updateDarkModeButtons(true);
+        }
+
+        // remove helper after the transition window
+        window.setTimeout(function() {
+            document.documentElement.classList.remove('theme-transition');
+        }, 250);
+    } catch (e) {
+        console.error('Error toggling dark mode:', e);
     }
-}
+};
 
 function updateDarkModeButtons(isDark) {
-    document.querySelectorAll('[data-toggle-dark-mode]').forEach(function(btn) {
-        if (btn.classList.contains('dark-mode-toggle')) {
-            btn.textContent = isDark ? '☀️' : '🌙';
+    const buttons = document.querySelectorAll('[data-toggle-dark-mode], .dark-mode-toggle');
+    buttons.forEach(function(btn) {
+        const moonIcon = btn.querySelector('.moon-icon');
+        const sunIcon = btn.querySelector('.sun-icon');
+        
+        if (isDark) {
+            moonIcon.style.display = 'none';
+            sunIcon.style.display = 'inline';
         } else {
-            btn.textContent = isDark ? '☀️ Light Mode' : '🌙 Dark Mode';
+            moonIcon.style.display = 'inline';
+            sunIcon.style.display = 'none';
         }
     });
 }
 
-// Add dark mode toggle button functionality
-document.querySelectorAll('[data-toggle-dark-mode]').forEach(function(btn) {
-    btn.addEventListener('click', function() {
-        toggleDarkMode();
-    });
-});
-
-// Initialize on page load
-document.addEventListener('DOMContentLoaded', function() {
-    initializeDarkMode();
-    
-    // Listen for system theme changes
-    window.matchMedia('(prefers-color-scheme: dark)').addEventListener('change', function() {
-        if (localStorage.getItem('darkMode') === null) {
+// Initialize dark mode when DOM is fully loaded
+function setupDarkMode() {
+    try {
+        // Initialize dark mode
+        if (typeof initializeDarkMode === 'function') {
             initializeDarkMode();
         }
-    });
-});
+        
+        // Add click event listeners to all dark mode toggles
+        document.querySelectorAll('[data-toggle-dark-mode], .dark-mode-toggle').forEach(function(btn) {
+            btn.addEventListener('click', function(e) {
+                e.preventDefault();
+                if (typeof toggleDarkMode === 'function') {
+                    toggleDarkMode();
+                }
+            });
+        });
+        
+        // Listen for system color scheme changes
+        const colorSchemeQuery = window.matchMedia('(prefers-color-scheme: dark)');
+        function handleColorSchemeChange(e) {
+            if (localStorage.getItem('darkMode') === null) {
+                initializeDarkMode();
+            }
+        }
+        
+        // Add event listener for color scheme changes
+        if (colorSchemeQuery.addEventListener) {
+            colorSchemeQuery.addEventListener('change', handleColorSchemeChange);
+        } else if (colorSchemeQuery.addListener) { // For older Safari
+            colorSchemeQuery.addListener(handleColorSchemeChange);
+        }
+        
+        // Handle error animation if needed
+        var hasError = document.querySelector('.alert-error');
+        var authCard = document.querySelector('.auth-card');
+        if (hasError && authCard) {
+            authCard.classList.add('animate-shake');
+            setTimeout(function(){ 
+                authCard.classList.remove('animate-shake'); 
+            }, 600);
+        }
+    } catch (error) {
+        console.error('Error initializing dark mode:', error);
+    }
+}
 
 // ===== Form Search & Filtering =====
 
@@ -278,10 +355,6 @@ function setupSearchFilters() {
     });
 }
 
-document.addEventListener('DOMContentLoaded', function() {
-    setupSearchFilters();
-});
-
 // ===== Utility Functions =====
 
 function showNotification(message, type = 'info') {
@@ -313,5 +386,26 @@ function showNotification(message, type = 'info') {
     }, 5000);
 }
 
-// Initialize application
-console.log('IITB SCAN - Patient Data Collection System v2.0 Loaded');
+// Initialize all components when DOM is fully loaded
+document.addEventListener('DOMContentLoaded', function() {
+    try {
+        // Initialize all components
+        setupFlashMessages();
+        setupModalManagement();
+        setupFormChangeListeners();
+        setupFormSubmissionHandlers();
+        setupDarkMode();
+        setupSearchFilters();
+        
+        // Initialize form if exists
+        const multiStepForm = document.querySelector('.multi-step-form');
+        if (multiStepForm) {
+            restoreDraft();
+            updateFormProgress();
+        }
+        
+        console.log('IITB SCAN - Patient Data Collection System v2.0 Loaded');
+    } catch (error) {
+        console.error('Error during initialization:', error);
+    }
+});
